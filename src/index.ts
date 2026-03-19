@@ -7,6 +7,7 @@ import { listWorkspaces } from './tools/list-workspaces.js';
 import { startAgentSession } from './tools/start-agent-session.js';
 import { readAgentOutput } from './tools/read-agent-output.js';
 import { sendAgentInput } from './tools/send-agent-input.js';
+import { getAgentState } from './tools/get-agent-state.js';
 
 const server = new McpServer({
   name: 'che-mcp-server',
@@ -78,6 +79,24 @@ server.tool(
   async ({ workspace, text, session_name, enter, container }) => {
     try {
       const result = await sendAgentInput({ workspace, text, session_name, enter, container });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    } catch (error) {
+      return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  'get_agent_state',
+  'Get the state of a tmux session (alive, running, exit code)',
+  {
+    workspace: z.string().describe('Target DevWorkspace name'),
+    session_name: z.string().optional().describe('tmux session name (default: agent)'),
+    container: z.string().optional().describe('Container name (auto-detected if omitted)'),
+  },
+  async ({ workspace, session_name, container }) => {
+    try {
+      const result = await getAgentState({ workspace, session_name, container });
       return { content: [{ type: 'text', text: JSON.stringify(result) }] };
     } catch (error) {
       return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
