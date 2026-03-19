@@ -6,6 +6,7 @@ import { initKubeClient } from './kube/client.js';
 import { listWorkspaces } from './tools/list-workspaces.js';
 import { startAgentSession } from './tools/start-agent-session.js';
 import { readAgentOutput } from './tools/read-agent-output.js';
+import { sendAgentInput } from './tools/send-agent-input.js';
 
 const server = new McpServer({
   name: 'che-mcp-server',
@@ -57,6 +58,26 @@ server.tool(
   async ({ workspace, session_name, lines, container }) => {
     try {
       const result = await readAgentOutput({ workspace, session_name, lines, container });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    } catch (error) {
+      return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  'send_agent_input',
+  'Send text input to a tmux session running in a workspace',
+  {
+    workspace: z.string().describe('Target DevWorkspace name'),
+    text: z.string().describe('Text to send to the session'),
+    session_name: z.string().optional().describe('tmux session name (default: agent)'),
+    enter: z.boolean().optional().describe('Send Enter key after text (default: true)'),
+    container: z.string().optional().describe('Container name (auto-detected if omitted)'),
+  },
+  async ({ workspace, text, session_name, enter, container }) => {
+    try {
+      const result = await sendAgentInput({ workspace, text, session_name, enter, container });
       return { content: [{ type: 'text', text: JSON.stringify(result) }] };
     } catch (error) {
       return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
