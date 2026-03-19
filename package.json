@@ -1,0 +1,26 @@
+{
+  "name": "che-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for Eclipse Che workspace management and coding agent orchestration",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "che-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "node dist/index.js"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@kubernetes/client-node": "^1.4.0",
+    "@modelcontextprotocol/sdk": "^1.27.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}
