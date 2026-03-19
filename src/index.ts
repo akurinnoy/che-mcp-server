@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { initKubeClient } from './kube/client.js';
 import { listWorkspaces } from './tools/list-workspaces.js';
 import { startAgentSession } from './tools/start-agent-session.js';
+import { readAgentOutput } from './tools/read-agent-output.js';
 
 const server = new McpServer({
   name: 'che-mcp-server',
@@ -37,6 +38,25 @@ server.tool(
   async ({ workspace, command, session_name, container }) => {
     try {
       const result = await startAgentSession({ workspace, command, session_name, container });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    } catch (error) {
+      return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  'read_agent_output',
+  'Read captured output from a tmux session running in a workspace',
+  {
+    workspace: z.string().describe('Target DevWorkspace name'),
+    session_name: z.string().optional().describe('tmux session name (default: agent)'),
+    lines: z.number().optional().describe('Number of lines to capture (default: 50)'),
+    container: z.string().optional().describe('Container name (auto-detected if omitted)'),
+  },
+  async ({ workspace, session_name, lines, container }) => {
+    try {
+      const result = await readAgentOutput({ workspace, session_name, lines, container });
       return { content: [{ type: 'text', text: JSON.stringify(result) }] };
     } catch (error) {
       return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
