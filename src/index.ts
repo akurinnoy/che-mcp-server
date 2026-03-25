@@ -124,7 +124,7 @@ server.tool(
 );
 
 async function main(): Promise<void> {
-  initKubeClient();
+  await initKubeClient();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
