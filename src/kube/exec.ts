@@ -88,12 +88,18 @@ export async function execInPod(
       reject(new Error(`Exec timed out after ${EXEC_TIMEOUT_MS}ms`));
     }, EXEC_TIMEOUT_MS);
 
+    const shellEscape = (arg: string) =>
+      "'" + arg.replace(/'/g, "'\\''") + "'";
+    const wrappedCommand = [
+      'bash', '-lc', command.map(shellEscape).join(' '),
+    ];
+
     kubeExec
       .exec(
         ns,
         podName,
         containerName,
-        command,
+        wrappedCommand,
         stdoutStream,
         stderrStream,
         null,
