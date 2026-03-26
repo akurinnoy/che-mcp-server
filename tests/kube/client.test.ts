@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@kubernetes/client-node');
 vi.mock('node:child_process');
+vi.mock('node:fs');
 
 describe('KubeClient', () => {
   beforeEach(() => {
@@ -124,5 +125,22 @@ describe('KubeClient', () => {
 
     const { initKubeClient } = await import('../../src/kube/client.js');
     await expect(initKubeClient()).rejects.toThrow();
+  });
+
+  it('reads namespace from SA mounted file', async () => {
+    const { KubeConfig } = await import('@kubernetes/client-node');
+    const { readFileSync } = await import('node:fs');
+    const mockKc = {
+      loadFromDefault: vi.fn(),
+      getCurrentContext: vi.fn().mockReturnValue('test-context'),
+      getContextObject: vi.fn().mockReturnValue({}),
+      makeApiClient: vi.fn().mockReturnValue({}),
+    };
+    vi.mocked(KubeConfig).mockImplementation(function() { return mockKc as any; });
+    vi.mocked(readFileSync).mockReturnValue('sa-namespace');
+
+    const { getNamespace, initKubeClient } = await import('../../src/kube/client.js');
+    await initKubeClient();
+    expect(getNamespace()).toBe('sa-namespace');
   });
 });

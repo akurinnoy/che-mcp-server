@@ -1,5 +1,6 @@
 import * as k8s from '@kubernetes/client-node';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 let kubeConfig: k8s.KubeConfig;
 let namespace: string;
@@ -7,6 +8,7 @@ let customObjectsApi: k8s.CustomObjectsApi;
 let coreV1Api: k8s.CoreV1Api;
 
 const NAMESPACE_SUFFIXES = ['-che', '-devspaces'];
+const SA_NAMESPACE_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/namespace';
 
 export async function initKubeClient(): Promise<void> {
   kubeConfig = new k8s.KubeConfig();
@@ -19,6 +21,14 @@ export async function initKubeClient(): Promise<void> {
   namespace = context?.namespace
     || process.env.CHE_MCP_NAMESPACE
     || '';
+
+  if (!namespace) {
+    try {
+      namespace = readFileSync(SA_NAMESPACE_PATH, 'utf-8').trim();
+    } catch {
+      // not running in-cluster, skip
+    }
+  }
 
   if (!namespace) {
     namespace = await detectNamespace();
