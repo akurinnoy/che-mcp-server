@@ -32,6 +32,69 @@ The server reads the namespace from the current kubeconfig context (automaticall
 
 No additional configuration is required.
 
+## Container Deployment
+
+The server supports containerized deployment for HTTP transport mode.
+
+### Building the container image
+
+```bash
+make build && make image
+```
+
+### Pushing to a container registry
+
+```bash
+make image-push
+```
+
+### Deploying to Kubernetes
+
+```bash
+kubectl apply -k deploy/ -n <namespace>
+```
+
+### Custom image and tag
+
+Override the image name and tag:
+
+```bash
+IMAGE=myrepo/myimage TAG=v1 make image
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CHE_MCP_TRANSPORT` | Transport mode: `stdio` or `http` | `stdio` |
+| `CHE_MCP_PORT` | Port for HTTP transport | `8080` |
+| `CHE_MCP_NAMESPACE` | Override namespace detection | (from kubeconfig) |
+
+CLI flags override environment variables:
+- `--transport <stdio|http>` — override `CHE_MCP_TRANSPORT`
+- `--port <number>` — override `CHE_MCP_PORT`
+
+## Client Configuration
+
+### ZeroClaw
+
+Add to your `zeroclaw.toml`:
+
+```toml
+[[mcp.servers]]
+name = "che"
+transport = "http"
+url = "http://che-mcp-server:8080/mcp"
+```
+
+### Claude Code
+
+Add via CLI:
+
+```bash
+claude mcp add --transport sse che http://che-mcp-server:8080/mcp
+```
+
 ## Tool Reference
 
 | Tool | Description | Parameters | Output |
