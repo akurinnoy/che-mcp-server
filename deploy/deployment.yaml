@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: che-mcp-server
+  labels:
+    app: che-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: che-mcp-server
+  template:
+    metadata:
+      labels:
+        app: che-mcp-server
+    spec:
+      containers:
+        - name: che-mcp-server
+          image: quay.io/che-incubator/che-mcp-server:next
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: CHE_MCP_TRANSPORT
+              value: "http"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5

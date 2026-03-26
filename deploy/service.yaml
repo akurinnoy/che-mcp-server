@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: che-mcp-server
+  labels:
+    app: che-mcp-server
+spec:
+  type: ClusterIP
+  selector:
+    app: che-mcp-server
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
