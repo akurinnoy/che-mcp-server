@@ -1,0 +1,8 @@
+node_modules
+src
+tests
+docs
+.git
+*.md
+tsconfig.json
+vitest.config.ts
