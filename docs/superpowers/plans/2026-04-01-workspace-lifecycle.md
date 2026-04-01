@@ -18,7 +18,7 @@
 - Create: `src/tools/create-workspace.ts`
 - Test: `tests/tools/create-workspace.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/tools/create-workspace.test.ts`:
 
@@ -96,12 +96,12 @@ describe('createWorkspace', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run tests/tools/create-workspace.test.ts`
 Expected: FAIL — module `../../src/tools/create-workspace.js` not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/tools/create-workspace.ts`:
 
@@ -142,12 +142,12 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{ 
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run tests/tools/create-workspace.test.ts`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/create-workspace.ts tests/tools/create-workspace.test.ts
@@ -162,7 +162,7 @@ git commit -s -m "feat: add create_workspace tool"
 - Create: `src/tools/start-workspace.ts`
 - Test: `tests/tools/start-workspace.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/tools/start-workspace.test.ts`:
 
@@ -203,12 +203,12 @@ describe('startWorkspace', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/tools/start-workspace.test.ts`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/tools/start-workspace.ts`:
 
@@ -239,12 +239,12 @@ export async function startWorkspace(params: StartWorkspaceParams): Promise<{ na
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/tools/start-workspace.test.ts`
 Expected: PASS (1 test)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/start-workspace.ts tests/tools/start-workspace.test.ts
@@ -259,7 +259,7 @@ git commit -s -m "feat: add start_workspace tool"
 - Create: `src/tools/stop-workspace.ts`
 - Test: `tests/tools/stop-workspace.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/tools/stop-workspace.test.ts`:
 
@@ -300,12 +300,12 @@ describe('stopWorkspace', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/tools/stop-workspace.test.ts`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/tools/stop-workspace.ts`:
 
@@ -336,12 +336,12 @@ export async function stopWorkspace(params: StopWorkspaceParams): Promise<{ name
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/tools/stop-workspace.test.ts`
 Expected: PASS (1 test)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/stop-workspace.ts tests/tools/stop-workspace.test.ts
@@ -356,7 +356,7 @@ git commit -s -m "feat: add stop_workspace tool"
 - Create: `src/tools/delete-workspace.ts`
 - Test: `tests/tools/delete-workspace.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/tools/delete-workspace.test.ts`:
 
@@ -393,12 +393,12 @@ describe('deleteWorkspace', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/tools/delete-workspace.test.ts`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/tools/delete-workspace.ts`:
 
@@ -425,12 +425,12 @@ export async function deleteWorkspace(params: DeleteWorkspaceParams): Promise<{ 
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/tools/delete-workspace.test.ts`
 Expected: PASS (1 test)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/delete-workspace.ts tests/tools/delete-workspace.test.ts
@@ -444,7 +444,7 @@ git commit -s -m "feat: add delete_workspace tool"
 **Files:**
 - Modify: `src/tools.ts`
 
-- [ ] **Step 1: Add imports and register all four tools**
+- [x] **Step 1: Add imports and register all four tools**
 
 Add to `src/tools.ts` after the existing imports:
 
@@ -523,17 +523,17 @@ Add these registrations inside `createMcpServer()`, after the existing `stop_age
   );
 ```
 
-- [ ] **Step 2: Run all tests to verify nothing is broken**
+- [x] **Step 2: Run all tests to verify nothing is broken**
 
 Run: `npx vitest run`
 Expected: All tests pass (existing + 5 new tests)
 
-- [ ] **Step 3: Build to verify TypeScript compiles**
+- [x] **Step 3: Build to verify TypeScript compiles**
 
 Run: `npm run build`
 Expected: Clean compilation, no errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/tools.ts
