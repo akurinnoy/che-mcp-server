@@ -21,13 +21,13 @@ Add four new MCP tools to manage DevWorkspace lifecycle: create, start, stop, de
 ### `start_workspace`
 
 - **Params:** `workspace` (string, required)
-- Patches `spec.started = true` via JSON merge patch
+- Patches `spec.started = true` via JSON Patch
 - **Returns:** `{ name, started: true }`
 
 ### `stop_workspace`
 
 - **Params:** `workspace` (string, required)
-- Patches `spec.started = false` via JSON merge patch
+- Patches `spec.started = false` via JSON Patch
 - **Returns:** `{ name, started: false }`
 
 ### `delete_workspace`
@@ -61,10 +61,10 @@ spec:
 
 ### Start / Stop
 
-`patchNamespacedCustomObject` with JSON merge patch (`application/merge-patch+json`):
+`patchNamespacedCustomObject` with JSON Patch (`application/json-patch+json`, the `@kubernetes/client-node` default):
 
 ```json
-{ "spec": { "started": true/false } }
+[{ "op": "replace", "path": "/spec/started", "value": true/false }]
 ```
 
 ### Delete
