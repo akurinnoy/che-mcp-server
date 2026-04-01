@@ -6,6 +6,10 @@ import { readAgentOutput } from './tools/read-agent-output.js';
 import { sendAgentInput } from './tools/send-agent-input.js';
 import { getAgentState } from './tools/get-agent-state.js';
 import { stopAgentSession } from './tools/stop-agent-session.js';
+import { createWorkspace } from './tools/create-workspace.js';
+import { startWorkspace } from './tools/start-workspace.js';
+import { stopWorkspace } from './tools/stop-workspace.js';
+import { deleteWorkspace } from './tools/delete-workspace.js';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -114,6 +118,70 @@ export function createMcpServer(): McpServer {
     async ({ workspace, session_name, container }) => {
       try {
         const result = await stopAgentSession({ workspace, session_name, container });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    'create_workspace',
+    'Create a new DevWorkspace from the default empty template and start it',
+    {
+      name: z.string().optional().describe('Workspace name (auto-generated if omitted)'),
+    },
+    async ({ name }) => {
+      try {
+        const result = await createWorkspace({ name });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    'start_workspace',
+    'Start a stopped DevWorkspace (sets spec.started to true)',
+    {
+      workspace: z.string().describe('DevWorkspace name to start'),
+    },
+    async ({ workspace }) => {
+      try {
+        const result = await startWorkspace({ workspace });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    'stop_workspace',
+    'Stop a running DevWorkspace (sets spec.started to false)',
+    {
+      workspace: z.string().describe('DevWorkspace name to stop'),
+    },
+    async ({ workspace }) => {
+      try {
+        const result = await stopWorkspace({ workspace });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    'delete_workspace',
+    'Delete a DevWorkspace (regardless of current state)',
+    {
+      workspace: z.string().describe('DevWorkspace name to delete'),
+    },
+    async ({ workspace }) => {
+      try {
+        const result = await deleteWorkspace({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };

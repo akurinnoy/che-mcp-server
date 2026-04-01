@@ -19,16 +19,13 @@ describe('stopWorkspace', () => {
     const result = await stopWorkspace({ workspace: 'my-workspace' });
 
     expect(result).toEqual({ name: 'my-workspace', started: false });
-    expect(mockApi.patchNamespacedCustomObject).toHaveBeenCalledWith(
-      {
-        group: 'workspace.devfile.io',
-        version: 'v1alpha2',
-        namespace: 'test-namespace',
-        plural: 'devworkspaces',
-        name: 'my-workspace',
-        body: { spec: { started: false } },
-      },
-      { headers: { 'Content-Type': 'application/merge-patch+json' } },
-    );
+    expect(mockApi.patchNamespacedCustomObject).toHaveBeenCalledWith({
+      group: 'workspace.devfile.io',
+      version: 'v1alpha2',
+      namespace: 'test-namespace',
+      plural: 'devworkspaces',
+      name: 'my-workspace',
+      body: [{ op: 'replace', path: '/spec/started', value: false }],
+    });
   });
 });
