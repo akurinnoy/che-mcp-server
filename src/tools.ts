@@ -10,6 +10,8 @@ import { createWorkspace } from './tools/create-workspace.js';
 import { startWorkspace } from './tools/start-workspace.js';
 import { stopWorkspace } from './tools/stop-workspace.js';
 import { deleteWorkspace } from './tools/delete-workspace.js';
+import { getWorkspaceStatus } from './tools/get-workspace-status.js';
+import { getWorkspacePod } from './tools/get-workspace-pod.js';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -183,6 +185,38 @@ export function createMcpServer(): McpServer {
       try {
         const result = await deleteWorkspace({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    'get_workspace_status',
+    'Get detailed status of a DevWorkspace (phase, conditions, URL, timestamps)',
+    {
+      workspace: z.string().describe('DevWorkspace name'),
+    },
+    async ({ workspace }) => {
+      try {
+        const result = await getWorkspaceStatus({ workspace });
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      } catch (error) {
+        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    'get_workspace_pod',
+    'Get pod details for a running DevWorkspace (pod name, phase, container status)',
+    {
+      workspace: z.string().describe('DevWorkspace name'),
+    },
+    async ({ workspace }) => {
+      try {
+        const result = await getWorkspacePod({ workspace });
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
       }

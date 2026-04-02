@@ -18,7 +18,7 @@
 - Create: `src/tools/get-workspace-status.ts`
 - Test: `tests/tools/get-workspace-status.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/tools/get-workspace-status.test.ts`:
 
@@ -117,12 +117,12 @@ describe('getWorkspaceStatus', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run tests/tools/get-workspace-status.test.ts`
 Expected: FAIL — module `../../src/tools/get-workspace-status.js` not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/tools/get-workspace-status.ts`:
 
@@ -183,12 +183,12 @@ export async function getWorkspaceStatus(params: GetWorkspaceStatusParams): Prom
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run tests/tools/get-workspace-status.test.ts`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/get-workspace-status.ts tests/tools/get-workspace-status.test.ts
@@ -203,7 +203,7 @@ git commit -s -m "feat: add get_workspace_status tool"
 - Create: `src/tools/get-workspace-pod.ts`
 - Test: `tests/tools/get-workspace-pod.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/tools/get-workspace-pod.test.ts`:
 
@@ -292,12 +292,12 @@ describe('getWorkspacePod', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run tests/tools/get-workspace-pod.test.ts`
 Expected: FAIL — module `../../src/tools/get-workspace-pod.js` not found
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/tools/get-workspace-pod.ts`:
 
@@ -347,12 +347,12 @@ export async function getWorkspacePod(params: GetWorkspacePodParams): Promise<Wo
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run tests/tools/get-workspace-pod.test.ts`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/get-workspace-pod.ts tests/tools/get-workspace-pod.test.ts
@@ -366,7 +366,7 @@ git commit -s -m "feat: add get_workspace_pod tool"
 **Files:**
 - Modify: `src/tools.ts`
 
-- [ ] **Step 1: Add imports and register both tools**
+- [x] **Step 1: Add imports and register both tools**
 
 Add to `src/tools.ts` after the existing imports (after line 12):
 
@@ -411,17 +411,17 @@ Add these registrations inside `createMcpServer()`, before `return server;`:
   );
 ```
 
-- [ ] **Step 2: Run all tests to verify nothing is broken**
+- [x] **Step 2: Run all tests to verify nothing is broken**
 
 Run: `npx vitest run`
 Expected: All tool tests pass
 
-- [ ] **Step 3: Build to verify TypeScript compiles**
+- [x] **Step 3: Build to verify TypeScript compiles**
 
 Run: `npm run build`
 Expected: Clean compilation, no errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/tools.ts
