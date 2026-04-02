@@ -1,68 +1,60 @@
 # che-mcp-server
 
-A Model Context Protocol (MCP) server for Eclipse Che workspace management and coding agent orchestration. It exposes DevWorkspace operations and tmux-based agent session control as tools, allowing any MCP-compatible AI agent to list workspaces, launch coding agents inside them, monitor their output, and relay user input when the agent is blocked.
+MCP server for Eclipse Che — exposes DevWorkspace operations and tmux-based coding agent session control as MCP tools. Any MCP-compatible AI agent can create, start, stop, and inspect workspaces, launch coding agents inside them, monitor output, and relay input.
+
+## Agent Quick Start
+
+### On-cluster (agent running as a DevWorkspace)
+
+The MCP server is deployed as a service in the user namespace. Connect to it directly:
+
+```bash
+# Claude Code
+claude mcp add --transport sse che http://che-mcp-server:8080/mcp
+
+# ZeroClaw — add to zeroclaw.toml
+[[mcp.servers]]
+name = "che"
+transport = "http"
+url = "http://che-mcp-server:8080/mcp"
+```
+
+### Local (from git repo)
+
+```bash
+git clone git@github.com:akurinnoy/che-mcp-server.git
+cd che-mcp-server
+npm ci && npm run build
+
+# Claude Code
+claude mcp add che-mcp-server -- node dist/index.js
+
+# Or run directly
+node dist/index.js
+```
+
+### From npm (once published)
+
+```bash
+# One-off
+npx che-mcp-server
+
+# Global install
+npm install -g che-mcp-server
+
+# Claude Code
+claude mcp add che-mcp-server -- npx che-mcp-server
+```
 
 ## Prerequisites
 
-- **Target workspaces:** tmux 3.1+ installed in the workspace image (most Ubuntu 22.04+ and UBI 9+ images include tmux 3.2+)
-- **Agent workspace:** User's kubeconfig injected (standard in Eclipse Che)
 - **Runtime:** Node.js 18+
-
-## Installation
-
-### Global install
-```bash
-npm install -g che-mcp-server
-```
-
-### One-off use with npx
-```bash
-npx che-mcp-server
-```
-
-### Baked into workspace image
-Add to your Dockerfile:
-```dockerfile
-RUN npm install -g che-mcp-server
-```
+- **Kubernetes:** User's kubeconfig injected (standard in Eclipse Che)
+- **Target workspaces:** tmux 3.1+ installed in the workspace image (most Ubuntu 22.04+ and UBI 9+ images include tmux 3.2+)
 
 ## Configuration
 
-The server reads the namespace from the current kubeconfig context (automatically set in Eclipse Che). Falls back to the `CHE_MCP_NAMESPACE` environment variable if the kubeconfig context has no namespace.
-
-No additional configuration is required.
-
-## Container Deployment
-
-The server supports containerized deployment for HTTP transport mode.
-
-### Building the container image
-
-```bash
-make build && make image
-```
-
-### Pushing to a container registry
-
-```bash
-make image-push
-```
-
-### Deploying to Kubernetes
-
-```bash
-kubectl apply -k deploy/ -n <namespace>
-```
-
-### Custom image and tag
-
-Override the image name and tag:
-
-```bash
-IMAGE=myrepo/myimage TAG=v1 make image
-```
-
-## Environment Variables
+### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -70,117 +62,107 @@ IMAGE=myrepo/myimage TAG=v1 make image
 | `CHE_MCP_PORT` | Port for HTTP transport | `8080` |
 | `CHE_MCP_NAMESPACE` | Override namespace detection | (from kubeconfig) |
 
+### CLI Flags
+
 CLI flags override environment variables:
+
 - `--transport <stdio|http>` — override `CHE_MCP_TRANSPORT`
 - `--port <number>` — override `CHE_MCP_PORT`
 
-## Client Configuration
+### Namespace Detection
 
-### ZeroClaw
+The server resolves the namespace in this order:
 
-Add to your `zeroclaw.toml`:
-
-```toml
-[[mcp.servers]]
-name = "che"
-transport = "http"
-url = "http://che-mcp-server:8080/mcp"
-```
-
-### Claude Code
-
-Add via CLI:
-
-```bash
-claude mcp add --transport sse che http://che-mcp-server:8080/mcp
-```
+1. Kubeconfig context namespace
+2. `CHE_MCP_NAMESPACE` environment variable
+3. ServiceAccount namespace file (`/var/run/secrets/kubernetes.io/serviceaccount/namespace`)
+4. `oc whoami` + Eclipse Che/DevSpaces suffix detection (`-che`, `-devspaces`)
 
 ## Tool Reference
 
-| Tool | Description | Parameters | Output |
-|------|-------------|------------|--------|
-| `list_workspaces` | Lists all DevWorkspaces in the user's namespace | None | Array of `{ name, phase, url, annotations }` |
-| `start_agent_session` | Starts a tmux session with a coding agent in a target workspace | `workspace` (required), `command` (required), `session_name` (default: `agent`), `container` (auto-detect) | `{ success: true, session_name: "agent" }` |
-| `read_agent_output` | Captures recent terminal output from a tmux session | `workspace` (required), `session_name` (default: `agent`), `lines` (default: 50), `container` (auto-detect) | `{ output: "...", lines_returned: 42 }` |
-| `send_agent_input` | Sends text to a tmux session | `workspace` (required), `text` (required), `session_name` (default: `agent`), `enter` (default: true), `container` (auto-detect) | `{ success: true }` |
-| `get_agent_state` | Checks if tmux session and process are alive | `workspace` (required), `session_name` (default: `agent`), `container` (auto-detect) | `{ session_alive: true, process_running: true, exit_code: null }` |
-| `stop_agent_session` | Kills a tmux session | `workspace` (required), `session_name` (default: `agent`), `container` (auto-detect) | `{ success: true }` |
+### Workspace Lifecycle
 
-### Output Formats
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_workspaces` | List all DevWorkspaces in the user namespace | None |
+| `create_workspace` | Create a new DevWorkspace from the default empty template and start it | `name` (optional — auto-generated if omitted) |
+| `start_workspace` | Start a stopped DevWorkspace | `workspace` (required) |
+| `stop_workspace` | Stop a running DevWorkspace | `workspace` (required) |
+| `delete_workspace` | Delete a DevWorkspace (regardless of state) | `workspace` (required) |
 
-#### `list_workspaces`
-```json
-[
-  {
-    "name": "my-project",
-    "phase": "Running",
-    "url": "https://che-host/user/my-project/3100/",
-    "annotations": {
-      "agent-status": "PR #123 created"
-    }
-  }
-]
-```
-- `url` is the workspace's main URL (from `.status.mainUrl`). Empty string if workspace is not Running.
-- `annotations` are filtered to keys prefixed with `che.eclipse.org/agent-`. Coding agents can report status by annotating their DevWorkspace CR with keys like `che.eclipse.org/agent-status`, `che.eclipse.org/agent-progress`.
+### Workspace Status
 
-#### `get_agent_state`
-```json
-{
-  "session_alive": true,
-  "process_running": true,
-  "exit_code": null
-}
-```
-- `exit_code` is `number | null` — set only when `process_running` is false.
-
-## Usage Example
-
-Configure as an MCP server in Claude Code:
-
-```bash
-claude mcp add che-mcp-server -- npx che-mcp-server
-```
-
-Or if installed globally:
-
-```bash
-claude mcp add che-mcp-server -- che-mcp-server
-```
-
-Once configured, the AI agent can use the tools directly. Example workflow:
-
-1. **List workspaces:** `list_workspaces` → find `my-project` in Running state
-2. **Start coding agent:** `start_agent_session` with `workspace: "my-project"`, `command: "gemini -p 'Add tests for auth module'"`
-3. **Monitor output:** `read_agent_output` → capture terminal output
-4. **Relay input when blocked:** `send_agent_input` with `text: "Yes, proceed"`
-5. **Check completion:** `get_agent_state` → process exited with code 0
-6. **Cleanup:** `stop_agent_session`
-
-## How It Works
-
-The server is a stateless bridge between MCP clients and the Kubernetes API. It translates MCP tool calls into Kubernetes API calls and pod exec commands.
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `get_workspace_status` | Get detailed status (phase, conditions, URL, timestamps) | `workspace` (required) |
+| `get_workspace_pod` | Get pod details (pod name, phase, container status) | `workspace` (required) |
 
 ### Agent Sessions
 
-Coding agent sessions are implemented using tmux inside target workspaces. Each tool call creates a one-shot exec connection to the target pod, runs a single tmux command, and closes. The tmux session persists independently inside the pod.
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `start_agent_session` | Start a tmux session with a coding agent in a workspace | `workspace`, `command` (required); `session_name`, `container` (optional) |
+| `read_agent_output` | Capture recent terminal output from a tmux session | `workspace` (required); `session_name`, `lines`, `container` (optional) |
+| `send_agent_input` | Send text to a tmux session | `workspace`, `text` (required); `session_name`, `enter`, `container` (optional) |
+| `get_agent_state` | Check if tmux session and process are alive | `workspace` (required); `session_name`, `container` (optional) |
+| `stop_agent_session` | Kill a tmux session | `workspace` (required); `session_name`, `container` (optional) |
 
-Session lifecycle:
-- **Start:** `tmux new-session -d -s agent 'gemini'` — creates a detached session
-- **Read output:** `tmux capture-pane -t agent -p` — captures scrollback buffer
-- **Send input:** `tmux send-keys -t agent -l 'response'` — uses literal mode to prevent injection
-- **Check state:** `tmux list-panes -t agent -F '#{pane_pid} #{pane_dead} #{pane_dead_status}'`
+## Usage Example
+
+```
+1. list_workspaces                         → find available workspaces
+2. create_workspace { name: "test-ws" }    → create a new workspace
+3. get_workspace_status { workspace: "test-ws" }  → wait until phase is Running
+4. start_agent_session { workspace: "test-ws", command: "claude -p 'Add tests'" }
+5. read_agent_output { workspace: "test-ws" }     → monitor progress
+6. send_agent_input { workspace: "test-ws", text: "Yes" }  → respond to prompts
+7. get_agent_state { workspace: "test-ws" }        → check if agent finished
+8. stop_agent_session { workspace: "test-ws" }     → cleanup
+9. stop_workspace { workspace: "test-ws" }         → stop when done
+```
+
+## Container Deployment
+
+### Build and push
+
+```bash
+make build && make image
+make image-push
+
+# Custom image and tag
+IMAGE=myrepo/myimage TAG=v1 make image image-push
+```
+
+### Deploy to Kubernetes
+
+```bash
+kubectl apply -k deploy/ -n <namespace>
+```
+
+The server starts in HTTP mode on port 8080 with a health endpoint at `/healthz`.
+
+## How It Works
+
+The server is a stateless bridge between MCP clients and the Kubernetes API.
+
+### Agent Sessions
+
+Coding agent sessions use tmux inside target workspace pods. Each tool call creates a one-shot exec connection, runs a single tmux command, and closes. The tmux session persists independently.
+
+- **Start:** `tmux new-session -d -s agent 'command'`
+- **Read:** `tmux capture-pane -t agent -p`
+- **Send:** `tmux send-keys -t agent -l 'text'` (literal mode prevents injection)
+- **Check:** `tmux list-panes -t agent -F '#{pane_pid} #{pane_dead} #{pane_dead_status}'`
 - **Stop:** `tmux kill-session -t agent`
 
-Sessions are configured with `remain-on-exit on` and 5000-line scrollback, ensuring output is preserved after the coding agent exits.
+Sessions use `remain-on-exit on` and 5000-line scrollback.
 
-### Namespace Isolation
+### Security
 
-The server only accesses the namespace from the user's kubeconfig context. No cross-namespace operations are possible. The user's OAuth token limits operations to what the user can do in the Che Dashboard — no privilege escalation.
-
-### Container Targeting
-
-All exec operations target the first container in the pod's container list that is NOT named `che-gateway`. This is the primary dev container in Che workspaces. An optional `container` parameter on all agent session tools allows explicit override when needed.
+- The server only accesses the user's namespace from their kubeconfig context
+- No cross-namespace operations
+- The user's OAuth token limits operations to what they can do in the Che Dashboard
+- All exec operations target the first non-`che-gateway` container (overridable with `container` parameter)
 
 ## License
 
