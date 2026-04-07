@@ -31,6 +31,8 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{ 
             name: 'dev',
             container: {
               image: 'quay.io/devfile/universal-developer-image:ubi8-latest',
+              command: ['/bin/sh', '-c'],
+              args: ['/ttyd-vol/ttyd -W -p 7681 bash'],
             },
           },
         ],
