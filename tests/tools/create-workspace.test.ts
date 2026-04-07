@@ -32,7 +32,16 @@ describe('createWorkspace', () => {
         metadata: { name: 'my-workspace' },
         spec: {
           started: true,
-          template: { schemaVersion: '2.2.0' },
+          template: {
+            components: [
+              {
+                name: 'dev',
+                container: {
+                  image: 'quay.io/devfile/universal-developer-image:ubi8-latest',
+                },
+              },
+            ],
+          },
         },
       },
     });
@@ -63,7 +72,16 @@ describe('createWorkspace', () => {
         metadata: { generateName: 'empty-' },
         spec: {
           started: true,
-          template: { schemaVersion: '2.2.0' },
+          template: {
+            components: [
+              {
+                name: 'dev',
+                container: {
+                  image: 'quay.io/devfile/universal-developer-image:ubi8-latest',
+                },
+              },
+            ],
+          },
         },
       },
     });

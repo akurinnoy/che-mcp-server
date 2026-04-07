@@ -18,7 +18,16 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{ 
     metadata,
     spec: {
       started: true,
-      template: { schemaVersion: '2.2.0' },
+      template: {
+        components: [
+          {
+            name: 'dev',
+            container: {
+              image: 'quay.io/devfile/universal-developer-image:ubi8-latest',
+            },
+          },
+        ],
+      },
     },
   };
 
