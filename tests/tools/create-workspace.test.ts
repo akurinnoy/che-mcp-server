@@ -39,9 +39,6 @@ describe('createWorkspace', () => {
           ],
           started: true,
           template: {
-            attributes: {
-              'controller.devfile.io/scc': 'container-build',
-            },
             components: [
               {
                 name: 'dev',
@@ -88,9 +85,6 @@ describe('createWorkspace', () => {
           ],
           started: true,
           template: {
-            attributes: {
-              'controller.devfile.io/scc': 'container-build',
-            },
             components: [
               {
                 name: 'dev',

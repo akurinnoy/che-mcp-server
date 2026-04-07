@@ -26,9 +26,6 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{ 
       ],
       started: true,
       template: {
-        attributes: {
-          'controller.devfile.io/scc': 'container-build',
-        },
         components: [
           {
             name: 'dev',
