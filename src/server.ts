@@ -40,17 +40,10 @@ async function handleMcpRequest(
 ): Promise<void> {
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
-  // Existing session — delegate
-  if (sessionId && transports.has(sessionId)) {
-    const transport = transports.get(sessionId)!;
-    await transport.handleRequest(req, res);
-    return;
-  }
-
-  // New session — only via POST with initialize request
+  // Parse body for POST requests (needed for both existing and new sessions)
+  let parsedBody: unknown;
   if (req.method === 'POST') {
     const body = await readBody(req);
-    let parsedBody: unknown;
     try {
       parsedBody = JSON.parse(body);
     } catch {
@@ -62,7 +55,18 @@ async function handleMcpRequest(
       }));
       return;
     }
+    normalizeToolCallArguments(parsedBody);
+  }
 
+  // Existing session — delegate
+  if (sessionId && transports.has(sessionId)) {
+    const transport = transports.get(sessionId)!;
+    await transport.handleRequest(req, res, parsedBody);
+    return;
+  }
+
+  // New session — only via POST with initialize request
+  if (req.method === 'POST') {
     if (!sessionId && isInitializeRequest(parsedBody)) {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
@@ -89,6 +93,22 @@ async function handleMcpRequest(
     error: { code: -32000, message: 'Bad Request: No valid session ID provided' },
     id: null,
   }));
+}
+
+// Some MCP clients send arguments: null for tools with no parameters.
+// The MCP SDK expects an empty object, so normalize here.
+function normalizeToolCallArguments(body: unknown): void {
+  const messages = Array.isArray(body) ? body : [body];
+  for (const msg of messages) {
+    if (
+      msg && typeof msg === 'object' &&
+      'method' in msg && (msg as any).method === 'tools/call' &&
+      'params' in msg && (msg as any).params &&
+      (msg as any).params.arguments === null
+    ) {
+      (msg as any).params.arguments = {};
+    }
+  }
 }
 
 function readBody(req: http.IncomingMessage): Promise<string> {
