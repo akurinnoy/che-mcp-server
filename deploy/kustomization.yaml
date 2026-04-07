@@ -4,6 +4,7 @@ resources:
   - rbac.yaml
   - deployment.yaml
   - service.yaml
+  - ttyd-editor.yaml
 images:
   - name: quay.io/che-incubator/che-mcp-server
     newName: quay.io/akurinnoy/che-mcp-server

@@ -31,8 +31,17 @@ describe('createWorkspace', () => {
         kind: 'DevWorkspace',
         metadata: { name: 'my-workspace' },
         spec: {
+          contributions: [
+            {
+              name: 'editor',
+              kubernetes: { name: 'ttyd-editor' },
+            },
+          ],
           started: true,
           template: {
+            attributes: {
+              'controller.devfile.io/scc': 'container-build',
+            },
             components: [
               {
                 name: 'dev',
@@ -71,8 +80,17 @@ describe('createWorkspace', () => {
         kind: 'DevWorkspace',
         metadata: { generateName: 'empty-' },
         spec: {
+          contributions: [
+            {
+              name: 'editor',
+              kubernetes: { name: 'ttyd-editor' },
+            },
+          ],
           started: true,
           template: {
+            attributes: {
+              'controller.devfile.io/scc': 'container-build',
+            },
             components: [
               {
                 name: 'dev',

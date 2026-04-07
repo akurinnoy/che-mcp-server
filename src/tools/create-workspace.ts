@@ -1,4 +1,5 @@
 import { getCustomObjectsApi, getNamespace } from '../kube/client.js';
+import { TTYD_EDITOR_TEMPLATE } from '../types.js';
 
 interface CreateWorkspaceParams {
   name?: string;
@@ -17,8 +18,17 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{ 
     kind: 'DevWorkspace',
     metadata,
     spec: {
+      contributions: [
+        {
+          name: 'editor',
+          kubernetes: { name: TTYD_EDITOR_TEMPLATE },
+        },
+      ],
       started: true,
       template: {
+        attributes: {
+          'controller.devfile.io/scc': 'container-build',
+        },
         components: [
           {
             name: 'dev',
