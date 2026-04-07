@@ -91,7 +91,7 @@ export async function execInPod(
     const shellEscape = (arg: string) =>
       "'" + arg.replace(/'/g, "'\\''") + "'";
     const wrappedCommand = [
-      'bash', '-lc', command.map(shellEscape).join(' '),
+      'bash', '-lc', `export SHELL=/bin/bash; ${command.map(shellEscape).join(' ')}`,
     ];
 
     kubeExec
