@@ -39,6 +39,7 @@ async function handleMcpRequest(
   res: http.ServerResponse,
 ): Promise<void> {
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
+  console.log(`[mcp] ${req.method} sessionId=${sessionId ?? '(none)'} activeSessions=${transports.size}`);
 
   // Parse body for POST requests (needed for both existing and new sessions)
   let parsedBody: unknown;
@@ -87,6 +88,7 @@ async function handleMcpRequest(
     }
   }
 
+  console.log(`[mcp] 400: method=${req.method} sessionId=${sessionId ?? '(none)'} isInit=${req.method === 'POST' ? isInitializeRequest(parsedBody) : 'n/a'}`);
   res.writeHead(400, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     jsonrpc: '2.0',
