@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: che-mcp-server
+  labels:
+    app: che-mcp-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: che-mcp-server
+  labels:
+    app: che-mcp-server
+rules:
+  - apiGroups: ["workspace.devfile.io"]
+    resources: ["devworkspaces"]
+    verbs: ["get", "list", "create", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: che-mcp-server
+  labels:
+    app: che-mcp-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: che-mcp-server
+subjects:
+  - kind: ServiceAccount
+    name: che-mcp-server
