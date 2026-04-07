@@ -88,7 +88,19 @@ async function handleMcpRequest(
     }
   }
 
-  console.log(`[mcp] 400: method=${req.method} sessionId=${sessionId ?? '(none)'} isInit=${req.method === 'POST' ? isInitializeRequest(parsedBody) : 'n/a'}`);
+  // Unknown session ID — tell client to re-initialize (404 per MCP spec)
+  if (sessionId) {
+    console.log(`[mcp] 404: unknown sessionId=${sessionId}`);
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      jsonrpc: '2.0',
+      error: { code: -32000, message: 'Session not found. Please re-initialize.' },
+      id: null,
+    }));
+    return;
+  }
+
+  console.log(`[mcp] 400: method=${req.method} no session, not an initialize request`);
   res.writeHead(400, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     jsonrpc: '2.0',
