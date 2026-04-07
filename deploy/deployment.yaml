@@ -18,6 +18,7 @@ spec:
       containers:
         - name: che-mcp-server
           image: quay.io/che-incubator/che-mcp-server:next
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               protocol: TCP
