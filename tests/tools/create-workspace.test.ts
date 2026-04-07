@@ -31,21 +31,27 @@ describe('createWorkspace', () => {
         kind: 'DevWorkspace',
         metadata: { name: 'my-workspace' },
         spec: {
-          contributions: [
-            {
-              name: 'editor',
-              kubernetes: { name: 'ttyd-editor' },
-            },
-          ],
           started: true,
           template: {
             components: [
               {
                 name: 'dev',
                 container: {
-                  image: 'quay.io/devfile/universal-developer-image:ubi8-latest',
-                  command: ['/bin/sh', '-c'],
-                  args: ['/ttyd-vol/ttyd -W -p 7681 bash'],
+                  image: 'quay.io/akurinnoy/agent-base:latest',
+                  endpoints: [
+                    {
+                      name: 'ttyd-terminal',
+                      targetPort: 7681,
+                      exposure: 'public',
+                      protocol: 'https',
+                      attributes: {
+                        type: 'main',
+                        cookiesAuthEnabled: true,
+                        discoverable: false,
+                        urlRewriteSupported: true,
+                      },
+                    },
+                  ],
                 },
               },
             ],
@@ -79,21 +85,27 @@ describe('createWorkspace', () => {
         kind: 'DevWorkspace',
         metadata: { generateName: 'empty-' },
         spec: {
-          contributions: [
-            {
-              name: 'editor',
-              kubernetes: { name: 'ttyd-editor' },
-            },
-          ],
           started: true,
           template: {
             components: [
               {
                 name: 'dev',
                 container: {
-                  image: 'quay.io/devfile/universal-developer-image:ubi8-latest',
-                  command: ['/bin/sh', '-c'],
-                  args: ['/ttyd-vol/ttyd -W -p 7681 bash'],
+                  image: 'quay.io/akurinnoy/agent-base:latest',
+                  endpoints: [
+                    {
+                      name: 'ttyd-terminal',
+                      targetPort: 7681,
+                      exposure: 'public',
+                      protocol: 'https',
+                      attributes: {
+                        type: 'main',
+                        cookiesAuthEnabled: true,
+                        discoverable: false,
+                        urlRewriteSupported: true,
+                      },
+                    },
+                  ],
                 },
               },
             ],

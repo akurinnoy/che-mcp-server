@@ -1,5 +1,5 @@
 import { getCustomObjectsApi, getNamespace } from '../kube/client.js';
-import { TTYD_EDITOR_TEMPLATE } from '../types.js';
+import { AGENT_BASE_IMAGE } from '../types.js';
 
 interface CreateWorkspaceParams {
   name?: string;
@@ -18,21 +18,27 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{ 
     kind: 'DevWorkspace',
     metadata,
     spec: {
-      contributions: [
-        {
-          name: 'editor',
-          kubernetes: { name: TTYD_EDITOR_TEMPLATE },
-        },
-      ],
       started: true,
       template: {
         components: [
           {
             name: 'dev',
             container: {
-              image: 'quay.io/devfile/universal-developer-image:ubi8-latest',
-              command: ['/bin/sh', '-c'],
-              args: ['/ttyd-vol/ttyd -W -p 7681 bash'],
+              image: AGENT_BASE_IMAGE,
+              endpoints: [
+                {
+                  name: 'ttyd-terminal',
+                  targetPort: 7681,
+                  exposure: 'public',
+                  protocol: 'https',
+                  attributes: {
+                    type: 'main',
+                    cookiesAuthEnabled: true,
+                    discoverable: false,
+                    urlRewriteSupported: true,
+                  },
+                },
+              ],
             },
           },
         ],

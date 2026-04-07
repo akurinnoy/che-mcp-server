@@ -27,6 +27,6 @@ export const DEFAULT_LINES = 50;
 
 export const EXEC_TIMEOUT_MS = 10_000;
 
-export const TTYD_EDITOR_TEMPLATE = 'ttyd-editor';
+export const AGENT_BASE_IMAGE = 'quay.io/akurinnoy/agent-base:latest';
 
 export const TMUX_HISTORY_LIMIT = 5000;
