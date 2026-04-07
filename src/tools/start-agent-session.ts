@@ -3,7 +3,6 @@ import { DEFAULT_SESSION_NAME, TMUX_HISTORY_LIMIT } from '../types.js';
 
 interface StartAgentSessionParams {
   workspace: string;
-  command: string;
   session_name?: string;
   container?: string;
 }
@@ -18,7 +17,6 @@ export async function startAgentSession(params: StartAgentSessionParams): Promis
     'tmux', 'new-session', '-d',
     '-s', sessionName,
     '-x', '200', '-y', '50',
-    `set -o pipefail; ${params.command}; exec bash`,
   ]);
 
   if (createResult.exitCode !== 0) {

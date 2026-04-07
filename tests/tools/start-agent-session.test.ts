@@ -25,7 +25,6 @@ describe('startAgentSession', () => {
     const { startAgentSession } = await import('../../src/tools/start-agent-session.js');
     const result = await startAgentSession({
       workspace: 'my-workspace',
-      command: 'gemini',
     });
 
     expect(result).toEqual({ success: true, session_name: 'agent' });
@@ -53,7 +52,6 @@ describe('startAgentSession', () => {
     const { startAgentSession } = await import('../../src/tools/start-agent-session.js');
     await startAgentSession({
       workspace: 'my-workspace',
-      command: 'gemini',
     });
 
     // Check remain-on-exit call
@@ -88,7 +86,6 @@ describe('startAgentSession', () => {
     const { startAgentSession } = await import('../../src/tools/start-agent-session.js');
     const result = await startAgentSession({
       workspace: 'my-workspace',
-      command: 'gemini',
     });
 
     expect(result.session_name).toBe('agent');
@@ -105,8 +102,7 @@ describe('startAgentSession', () => {
     await expect(
       startAgentSession({
         workspace: 'my-workspace',
-        command: 'gemini',
-      }),
+        }),
     ).rejects.toThrow('No running pod found for workspace "my-workspace"');
   });
 
@@ -128,8 +124,7 @@ describe('startAgentSession', () => {
     await expect(
       startAgentSession({
         workspace: 'my-workspace',
-        command: 'gemini',
-      }),
+        }),
     ).rejects.toThrow('Session "agent" already exists in workspace "my-workspace"');
   });
 
@@ -151,8 +146,7 @@ describe('startAgentSession', () => {
     await expect(
       startAgentSession({
         workspace: 'my-workspace',
-        command: 'gemini',
-      }),
+        }),
     ).rejects.toThrow('tmux not found in workspace "my-workspace". The workspace image must include tmux.');
   });
 });

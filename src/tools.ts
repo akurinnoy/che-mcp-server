@@ -35,16 +35,15 @@ export function createMcpServer(): McpServer {
 
   server.tool(
     'start_agent_session',
-    'Start a tmux session with a coding agent inside a running target workspace',
+    'Start a bash tmux session inside a running target workspace',
     {
       workspace: z.string().describe('Target DevWorkspace name'),
-      command: z.string().describe('Command to run (e.g., gemini, claude -p "task")'),
       session_name: z.string().optional().describe('tmux session name (default: agent)'),
       container: z.string().optional().describe('Container name (auto-detected if omitted)'),
     },
-    async ({ workspace, command, session_name, container }) => {
+    async ({ workspace, session_name, container }) => {
       try {
-        const result = await startAgentSession({ workspace, command, session_name, container });
+        const result = await startAgentSession({ workspace, session_name, container });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
