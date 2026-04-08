@@ -4,6 +4,7 @@ import { initKubeClient } from './kube/client.js';
 import { parseConfig } from './config.js';
 import { createMcpServer } from './tools.js';
 import { startHttpServer, shutdownHttpServer } from './server.js';
+import type { ServerMode } from './types.js';
 
 async function main(): Promise<void> {
   const config = parseConfig(process.argv.slice(2));
@@ -23,7 +24,8 @@ async function main(): Promise<void> {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
   } else {
-    const server = createMcpServer();
+    const mode = (process.env.CHE_MCP_MODE ?? 'orchestration') as ServerMode;
+    const server = createMcpServer(mode);
     const transport = new StdioServerTransport();
     await server.connect(transport);
   }
