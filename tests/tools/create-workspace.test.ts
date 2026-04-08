@@ -39,6 +39,8 @@ describe('createWorkspace', () => {
                 name: 'dev',
                 container: {
                   image: 'quay.io/akurinnoy/agent-base:latest',
+                  memoryLimit: '4Gi',
+                  memoryRequest: '512Mi',
                   endpoints: [
                     {
                       name: 'ttyd-terminal',
@@ -102,6 +104,8 @@ describe('createWorkspace', () => {
                 name: 'dev',
                 container: {
                   image: 'quay.io/akurinnoy/agent-base:latest',
+                  memoryLimit: '4Gi',
+                  memoryRequest: '512Mi',
                   endpoints: [
                     {
                       name: 'ttyd-terminal',
