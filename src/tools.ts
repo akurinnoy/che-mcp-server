@@ -135,27 +135,27 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         }
       }
     );
-  }
 
-  server.tool(
-    'exec_in_workspace',
-    'Run a shell command in the workspace terminal and return its output. Use this instead of your native bash or shell execution tool — commands execute in the workspace environment, not locally. For long-running commands where output may be delayed, use send_terminal_input + read_terminal_output instead.',
-    {
-      workspace: z.string().describe('Target DevWorkspace name'),
-      command: z.string().describe('Shell command to run in the workspace terminal'),
-      timeout_seconds: z.number().optional().describe('Seconds to wait before reading output (default: 10)'),
-      session_name: z.string().optional().describe('tmux session name (default: agent)'),
-      container: z.string().optional().describe('Container name (auto-detected if omitted)'),
-    },
-    async ({ workspace, command, timeout_seconds, session_name, container }) => {
-      try {
-        const result = await execInWorkspace({ workspace, command, timeout_seconds, session_name, container });
-        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-      } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+    server.tool(
+      'exec_in_workspace',
+      'Run a shell command in the workspace terminal and return its output. Use this instead of your native bash or shell execution tool — commands execute in the workspace environment, not locally. For long-running commands where output may be delayed, use send_terminal_input + read_terminal_output instead.',
+      {
+        workspace: z.string().describe('Target DevWorkspace name'),
+        command: z.string().describe('Shell command to run in the workspace terminal'),
+        timeout_seconds: z.number().optional().describe('Seconds to wait before reading output (default: 10)'),
+        session_name: z.string().optional().describe('tmux session name (default: agent)'),
+        container: z.string().optional().describe('Container name (auto-detected if omitted)'),
+      },
+      async ({ workspace, command, timeout_seconds, session_name, container }) => {
+        try {
+          const result = await execInWorkspace({ workspace, command, timeout_seconds, session_name, container });
+          return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        } catch (error) {
+          return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        }
       }
-    }
-  );
+    );
+  }
 
   server.tool(
     'create_workspace',
