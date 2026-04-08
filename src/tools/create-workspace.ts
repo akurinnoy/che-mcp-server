@@ -69,14 +69,16 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
     injected.push(tool);
   }
 
-  // Start workspace after all patches applied
+  // Start workspace after all patches applied.
+  // Must use JSON patch array — @kubernetes/client-node sends application/json-patch+json,
+  // which requires an array body (not a merge-patch object).
   await api.patchNamespacedCustomObject({
     group: 'workspace.devfile.io',
     version: 'v1alpha2',
     namespace,
     plural: 'devworkspaces',
     name: workspaceName,
-    body: { spec: { started: true } },
+    body: [{ op: 'replace', path: '/spec/started', value: true }],
   });
 
   return { name: workspaceName, started: true, tools_injected: injected };
