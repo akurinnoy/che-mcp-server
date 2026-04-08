@@ -5,148 +5,164 @@ vi.mock('../../src/kube/client.js', () => ({
   getNamespace: vi.fn().mockReturnValue('test-namespace'),
 }));
 
-// ─── applyToolToComponents (pure function — no mocks needed) ─────────────────
+// ─── buildJsonPatchOps (pure function — no mocks needed) ─────────────────────
 
-describe('applyToolToComponents', () => {
+describe('buildJsonPatchOps', () => {
   beforeEach(() => {
     vi.resetModules();
   });
 
-  it('mutates array with component objects — never JSON patch ops', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{ name: 'dev', container: { image: 'my-image' } }];
+  it('returns a JSON patch array — every entry has op+path, never a component shape', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = { spec: { template: { components: [{ name: 'dev', container: { image: 'my-image' } }] } } };
 
-    applyToolToComponents('opencode', components);
+    const ops = buildJsonPatchOps('opencode', dw);
 
-    // Every entry must be a component (has 'name'), not a JSON Patch op (has 'op'/'path')
-    for (const c of components) {
-      expect(c).toHaveProperty('name');
-      expect(c).not.toHaveProperty('op');
-      expect(c).not.toHaveProperty('path');
+    expect(Array.isArray(ops)).toBe(true);
+    for (const op of ops) {
+      expect(op).toHaveProperty('op');
+      expect(op).toHaveProperty('path');
+      // Must NOT look like a component object
+      expect(op).not.toHaveProperty('name');
+      expect(op).not.toHaveProperty('container');
+      expect(op).not.toHaveProperty('volume');
     }
   });
 
-  it('adds injected-tools volume and injector init container', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{ name: 'dev', container: { image: 'my-image' } }];
+  it('includes an op that adds the injected-tools volume', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = { spec: { template: { components: [{ name: 'dev', container: { image: 'my-image' } }] } } };
 
-    applyToolToComponents('opencode', components);
+    const ops = buildJsonPatchOps('opencode', dw);
 
-    expect(components.find(c => c.name === 'injected-tools')).toBeDefined();
-    expect(components.find(c => c.name === 'opencode-injector')).toBeDefined();
+    const volumeOp = ops.find(o => o.op === 'add' && (o.value as any)?.name === 'injected-tools');
+    expect(volumeOp).toBeDefined();
   });
 
-  it('sets correct image on injector container', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{ name: 'dev', container: { image: 'my-image' } }];
+  it('includes an op that adds the injector init container with correct image', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = { spec: { template: { components: [{ name: 'dev', container: { image: 'my-image' } }] } } };
 
-    applyToolToComponents('opencode', components);
+    const ops = buildJsonPatchOps('opencode', dw);
 
-    const injector = components.find(c => c.name === 'opencode-injector');
-    expect(injector?.container?.image).toBe('quay.io/akurinnoy/tools-injector/opencode:next');
+    const injectorOp = ops.find(o => o.op === 'add' && (o.value as any)?.name === 'opencode-injector');
+    expect(injectorOp).toBeDefined();
+    expect((injectorOp!.value as any).container.image).toBe('quay.io/akurinnoy/tools-injector/opencode:next');
   });
 
-  it('adds volume mount to editor container', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{ name: 'dev', container: { image: 'my-image' } }];
+  it('includes ops that add volume mount and PATH env to editor container', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = { spec: { template: { components: [{ name: 'dev', container: { image: 'my-image' } }] } } };
 
-    applyToolToComponents('opencode', components);
+    const ops = buildJsonPatchOps('opencode', dw);
 
-    const editor = components.find(c => c.name === 'dev');
-    expect(editor?.container?.volumeMounts).toContainEqual({ name: 'injected-tools', path: '/injected-tools' });
+    const mountOp = ops.find(o => o.op === 'add' && o.path.includes('volumeMounts'));
+    expect(mountOp).toBeDefined();
+
+    const pathOp = ops.find(o => {
+      const v = o.value as any;
+      return o.op === 'add' && (Array.isArray(v) ? v[0]?.name : v?.name) === 'PATH';
+    });
+    expect(pathOp).toBeDefined();
   });
 
-  it('adds PATH env var pointing to /injected-tools/bin to editor container', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{ name: 'dev', container: { image: 'my-image' } }];
-
-    applyToolToComponents('opencode', components);
-
-    const editor = components.find(c => c.name === 'dev');
-    const pathEntry = editor?.container?.env?.find((e: any) => e.name === 'PATH');
-    expect(pathEntry?.value).toContain('/injected-tools/bin');
-  });
-
-  it('does not add duplicate injected-tools volume when already present', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [
-      { name: 'dev', container: { image: 'my-image' } },
-      { name: 'injected-tools', volume: { size: '256Mi' } },
-    ];
-
-    applyToolToComponents('opencode', components);
-
-    const volumes = components.filter(c => c.name === 'injected-tools');
-    expect(volumes).toHaveLength(1);
-  });
-
-  it('does not add duplicate PATH when already present', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{
-      name: 'dev',
-      container: {
-        image: 'my-image',
-        env: [{ name: 'PATH', value: '/injected-tools/bin:/usr/bin' }],
+  it('skips injected-tools volume op when already present', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = {
+      spec: {
+        template: {
+          components: [
+            { name: 'dev', container: { image: 'my-image' } },
+            { name: 'injected-tools', volume: { size: '256Mi' } },
+          ],
+        },
       },
-    }];
+    };
 
-    applyToolToComponents('opencode', components);
+    const ops = buildJsonPatchOps('opencode', dw);
 
-    const editor = components.find(c => c.name === 'dev');
-    const pathEntries = editor?.container?.env?.filter((e: any) => e.name === 'PATH');
-    expect(pathEntries).toHaveLength(1);
+    const volumeOps = ops.filter(o => (o.value as any)?.name === 'injected-tools');
+    expect(volumeOps).toHaveLength(0);
   });
 
-  it('does not add duplicate volume mount when already present', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{
-      name: 'dev',
-      container: {
-        image: 'my-image',
-        volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
+  it('skips volume mount op when mount already present on editor', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = {
+      spec: {
+        template: {
+          components: [{
+            name: 'dev',
+            container: {
+              image: 'my-image',
+              volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
+            },
+          }],
+        },
       },
-    }];
+    };
 
-    applyToolToComponents('opencode', components);
-
-    const editor = components.find(c => c.name === 'dev');
-    const mounts = editor?.container?.volumeMounts?.filter((m: any) => m.name === 'injected-tools');
-    expect(mounts).toHaveLength(1);
+    const ops = buildJsonPatchOps('opencode', dw);
+    const mountOps = ops.filter(o => o.op === 'add' && o.path.includes('volumeMounts'));
+    expect(mountOps).toHaveLength(0);
   });
 
-  it('handles editor with no existing env or volumeMounts arrays', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [{ name: 'dev', container: { image: 'my-image' } }];
+  it('skips PATH op when PATH already present on editor', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = {
+      spec: {
+        template: {
+          components: [{
+            name: 'dev',
+            container: {
+              image: 'my-image',
+              env: [{ name: 'PATH', value: '/injected-tools/bin:/usr/bin' }],
+            },
+          }],
+        },
+      },
+    };
 
-    // Must not throw when env/volumeMounts are undefined
-    expect(() => applyToolToComponents('tmux', components)).not.toThrow();
-
-    const editor = components.find(c => c.name === 'dev');
-    expect(editor?.container?.volumeMounts).toBeDefined();
-    expect(editor?.container?.env).toBeDefined();
+    const ops = buildJsonPatchOps('opencode', dw);
+    const pathOps = ops.filter(o => {
+      const v = o.value as any;
+      return (Array.isArray(v) ? v[0]?.name : v?.name) === 'PATH';
+    });
+    expect(pathOps).toHaveLength(0);
   });
 
-  it('skips editor updates gracefully when no editor component exists', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [];
+  it('returns only infra+tool ops when no editor component is found', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = { spec: { template: { components: [] } } };
 
-    expect(() => applyToolToComponents('opencode', components)).not.toThrow();
-    // Volume and injector should still be added
-    expect(components.find(c => c.name === 'injected-tools')).toBeDefined();
-    expect(components.find(c => c.name === 'opencode-injector')).toBeDefined();
+    const ops = buildJsonPatchOps('opencode', dw);
+
+    // Should still include volume and injector ops, but no editor-related ops
+    expect(ops.length).toBeGreaterThan(0);
+    const hasMountOp = ops.some(o => o.path.includes('volumeMounts'));
+    const hasEnvOp = ops.some(o => o.path.includes('/env'));
+    expect(hasMountOp).toBe(false);
+    expect(hasEnvOp).toBe(false);
   });
 
-  it('does not modify other tool injectors when one is already present', async () => {
-    const { applyToolToComponents } = await import('../../src/orchestrator/tool-injector.js');
-    const components: any[] = [
-      { name: 'dev', container: { image: 'my-image' } },
-      { name: 'tmux-injector', container: { image: 'quay.io/akurinnoy/tools-injector/tmux:next', command: ['/bin/cp'] } },
-    ];
+  it('editor stays at original index regardless of prepended infra ops', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    // dev is at index 1 (after a pre-existing unrelated component)
+    const dw = {
+      spec: {
+        template: {
+          components: [
+            { name: 'other-volume', volume: {} },
+            { name: 'dev', container: { image: 'my-image' } },
+          ],
+        },
+      },
+    };
 
-    applyToolToComponents('opencode', components);
+    const ops = buildJsonPatchOps('opencode', dw);
 
-    const tmuxInjector = components.find(c => c.name === 'tmux-injector');
-    expect(tmuxInjector?.container?.image).toBe('quay.io/akurinnoy/tools-injector/tmux:next');
+    // Editor ops must target index 1
+    const editorOps = ops.filter(o => o.path.startsWith('/spec/template/components/1/'));
+    expect(editorOps.length).toBeGreaterThan(0);
   });
 });
 
@@ -171,14 +187,14 @@ describe('validateTool', () => {
   });
 });
 
-// ─── injectToolIntoWorkspace (verifies merge-patch shape sent to k8s) ─────────
+// ─── injectToolIntoWorkspace — verifies JSON patch array sent to k8s ──────────
 
 describe('injectToolIntoWorkspace', () => {
   beforeEach(() => {
     vi.resetModules();
   });
 
-  it('sends a merge-patch object (not a JSON patch array) to patchNamespacedCustomObject', async () => {
+  it('sends a JSON patch array (not a merge-patch object) to patchNamespacedCustomObject', async () => {
     const { getCustomObjectsApi } = await import('../../src/kube/client.js');
 
     const mockDw = {
@@ -196,18 +212,15 @@ describe('injectToolIntoWorkspace', () => {
 
     const callArgs = patchSpy.mock.calls[0][0];
 
-    // Body must be a plain object (merge patch), not an array (JSON patch)
-    expect(Array.isArray(callArgs.body)).toBe(false);
-    expect(typeof callArgs.body).toBe('object');
+    // Body must be a JSON patch array, not a merge-patch object.
+    // The k8s client sends application/json-patch+json; API expects an array.
+    expect(Array.isArray(callArgs.body)).toBe(true);
 
-    // Body must contain the modified components under spec.template
-    expect(callArgs.body.spec?.template?.components).toBeDefined();
-    expect(Array.isArray(callArgs.body.spec.template.components)).toBe(true);
-
-    // Injected volume and tool container must be present in the patch body
-    const components = callArgs.body.spec.template.components;
-    expect(components.find((c: any) => c.name === 'injected-tools')).toBeDefined();
-    expect(components.find((c: any) => c.name === 'opencode-injector')).toBeDefined();
+    // Every element must be a patch op
+    for (const op of callArgs.body as any[]) {
+      expect(op).toHaveProperty('op');
+      expect(op).toHaveProperty('path');
+    }
   });
 
   it('throws for unknown tool before calling the Kubernetes API', async () => {
@@ -218,7 +231,6 @@ describe('injectToolIntoWorkspace', () => {
     const { injectToolIntoWorkspace } = await import('../../src/orchestrator/tool-injector.js');
     await expect(injectToolIntoWorkspace('my-workspace', 'bogus-tool')).rejects.toThrow('Unknown tool "bogus-tool"');
 
-    // Should not have called the API at all
     expect(getSpy).not.toHaveBeenCalled();
   });
 });
