@@ -31,11 +31,16 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
   server.tool(
     'list_workspaces',
     'List all DevWorkspaces in the user namespace with their phase, URL, and agent annotations',
-    {},
-    async () => {
+    {
+      limit: z.number().int().min(1).max(100).default(50).optional()
+        .describe('Max workspaces to return (default: 50)'),
+      offset: z.number().int().min(0).default(0).optional()
+        .describe('Number of workspaces to skip (for pagination)'),
+    },
+    async ({ limit, offset }) => {
       try {
-        const workspaces = await listWorkspaces();
-        return { content: [{ type: 'text', text: JSON.stringify(workspaces, null, 2) }] };
+        const result = await listWorkspaces({ limit, offset });
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
       }
@@ -289,10 +294,15 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
   server.tool(
     'list_all_agents',
     'List all workspaces that have or had an active coding agent session, with their current status.',
-    {},
-    async () => {
+    {
+      limit: z.number().int().min(1).max(100).default(50).optional()
+        .describe('Max agents to return (default: 50)'),
+      offset: z.number().int().min(0).default(0).optional()
+        .describe('Number of entries to skip (for pagination)'),
+    },
+    async ({ limit, offset }) => {
       try {
-        const result = await listAllAgentsTool();
+        const result = await listAllAgentsTool({ limit, offset });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
