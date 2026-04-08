@@ -1,9 +1,6 @@
 import { getCustomObjectsApi, getNamespace } from '../kube/client.js';
 import { AGENT_BASE_IMAGE } from '../types.js';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execFileAsync = promisify(execFile);
+import { injectTool } from './inject-tool.js';
 
 interface CreateWorkspaceParams {
   name?: string;
@@ -68,12 +65,8 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
   const injected: string[] = [];
 
   for (const tool of toolsToInject) {
-    try {
-      await execFileAsync('inject-tool', [tool, workspaceName], { timeout: 30_000 });
-      injected.push(tool);
-    } catch (err: any) {
-      throw new Error(`Failed to inject tool "${tool}" into workspace "${workspaceName}": ${err.message}`);
-    }
+    await injectTool({ workspace: workspaceName, tool });
+    injected.push(tool);
   }
 
   // Start workspace after all patches applied
