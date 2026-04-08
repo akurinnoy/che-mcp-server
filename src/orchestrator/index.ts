@@ -101,9 +101,16 @@ export async function getAgentStatus(params: { workspace: string }): Promise<Age
   return makeStatus(workspace, 'finished', ann, state.exit_code, output, ttydUrl);
 }
 
-export async function listAllAgents(): Promise<AgentStatus[]> {
-  const workspaces = await listWorkspaces();
-  const withSession = workspaces.filter(
+export async function listAllAgents(params: { limit?: number; offset?: number } = {}): Promise<{
+  items: AgentStatus[];
+  total: number;
+  count: number;
+  offset: number;
+  has_more: boolean;
+}> {
+  // Fetch all workspaces (no pagination — we need the full list to filter by annotation)
+  const { items: allWorkspaces } = await listWorkspaces({ limit: 10000 });
+  const withSession = allWorkspaces.filter(
     w => w.annotations['che.eclipse.org/agent-session'],
   );
 
@@ -111,9 +118,15 @@ export async function listAllAgents(): Promise<AgentStatus[]> {
     withSession.map(w => getAgentStatus({ workspace: w.name })),
   );
 
-  return results
+  const allAgents = results
     .filter((r): r is PromiseFulfilledResult<AgentStatus> => r.status === 'fulfilled')
     .map(r => r.value);
+
+  const total = allAgents.length;
+  const offset = params.offset ?? 0;
+  const limit = params.limit ?? 50;
+  const items = allAgents.slice(offset, offset + limit);
+  return { items, total, count: items.length, offset, has_more: offset + limit < total };
 }
 
 export async function sendMessageToAgent(params: {
