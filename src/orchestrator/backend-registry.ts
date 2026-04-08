@@ -10,10 +10,15 @@ export const BACKEND_REGISTRY: Record<string, BackendEntry> = {
   },
   'opencode': {
     required_tool: 'opencode',
-    // opencode run: non-interactive batch mode. API keys must be configured in the workspace.
+    // opencode run: non-interactive batch mode.
     // --format json: emits persistent JSON event lines instead of a TUI that clears on exit,
-    // allowing tmux capture-pane (get_agent_output) to read the output after completion.
-    launch_command: (task: string) => `opencode run --format json ${shellQuote(task)}`,
+    //   making get_agent_output readable after completion.
+    // -m: model is required; without it opencode shows a TUI picker and blocks forever.
+    //   Uses ${OPENCODE_DEFAULT_MODEL:-google/gemini-2.5-flash} so the workspace can override
+    //   via env var, falling back to gemini-2.5-flash (matches the GEMINI_API_KEY present
+    //   in agent workspaces). Double-quoted so bash expands the variable at runtime.
+    launch_command: (task: string) =>
+      `opencode run --format json -m "\${OPENCODE_DEFAULT_MODEL:-google/gemini-2.5-flash}" ${shellQuote(task)}`,
   },
   'gemini-cli': {
     required_tool: 'gemini-cli',
