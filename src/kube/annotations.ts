@@ -20,6 +20,10 @@ export async function readAgentAnnotations(workspace: string): Promise<AgentAnno
     group: DW_GROUP, version: DW_VERSION, namespace: ns, plural: DW_PLURAL, name: workspace,
   }) as any;
 
+  if (!dw || typeof dw !== 'object') {
+    throw new Error(`Unexpected response for workspace "${workspace}": ${JSON.stringify(dw)}`);
+  }
+
   const ann: Record<string, string> = dw.metadata?.annotations ?? {};
 
   return {
@@ -37,6 +41,8 @@ export async function writeAgentAnnotations(
   const api = getCustomObjectsApi();
   const ns  = getNamespace();
 
+  // Null values are intentional: JSON merge patch (RFC 7396) removes keys with null values.
+  // This is used by clearAgentAnnotations to remove all agent annotations from the CR.
   const annotations: Record<string, string | null> = {
     [ANN_SESSION]:  values.session,
     [ANN_TYPE]:     values.agent_type,
