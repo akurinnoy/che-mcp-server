@@ -66,7 +66,7 @@ describe('createWorkspace', () => {
       namespace: 'test-namespace',
       plural: 'devworkspaces',
       name: 'my-workspace',
-      body: { spec: { started: true } },
+      body: [{ op: 'replace', path: '/spec/started', value: true }],
     });
   });
 
@@ -129,7 +129,7 @@ describe('createWorkspace', () => {
       namespace: 'test-namespace',
       plural: 'devworkspaces',
       name: 'empty-abc12',
-      body: { spec: { started: true } },
+      body: [{ op: 'replace', path: '/spec/started', value: true }],
     });
   });
 });

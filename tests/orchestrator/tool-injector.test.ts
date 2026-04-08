@@ -280,6 +280,23 @@ describe('buildJsonPatchOps', () => {
     expect(createEventsOp).toBeUndefined();
   });
 
+  it('returns empty array when the tool injector component already exists (idempotency)', async () => {
+    const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
+    const dw = {
+      spec: {
+        template: {
+          components: [
+            { name: 'dev', container: { image: 'my-image' } },
+            { name: 'opencode-injector', container: { image: 'some-image' } },
+          ],
+        },
+      },
+    };
+
+    const ops = buildJsonPatchOps('opencode', dw);
+    expect(ops).toHaveLength(0);
+  });
+
   it('editor stays at original index regardless of prepended infra ops', async () => {
     const { buildJsonPatchOps } = await import('../../src/orchestrator/tool-injector.js');
     // dev is at index 1 (after a pre-existing unrelated component)
@@ -357,6 +374,62 @@ describe('injectToolIntoWorkspace', () => {
       expect(op).toHaveProperty('op');
       expect(op).toHaveProperty('path');
     }
+  });
+
+  it('writes che.eclipse.org/tools-injector/<tool> annotation after injection', async () => {
+    const { getCustomObjectsApi } = await import('../../src/kube/client.js');
+
+    const mockDw = {
+      spec: { template: { components: [{ name: 'dev', container: { image: 'my-image' } }] } },
+    };
+    const patchSpy = vi.fn().mockResolvedValue({});
+
+    vi.mocked(getCustomObjectsApi).mockReturnValue({
+      getNamespacedCustomObject: vi.fn().mockResolvedValue(mockDw),
+      patchNamespacedCustomObject: patchSpy,
+    } as any);
+
+    const { injectToolIntoWorkspace } = await import('../../src/orchestrator/tool-injector.js');
+    await injectToolIntoWorkspace('my-workspace', 'opencode');
+
+    // Second patchNamespacedCustomObject call must write the annotation.
+    expect(patchSpy).toHaveBeenCalledTimes(2);
+    const annotationCallArgs = patchSpy.mock.calls[1][0];
+    const annotationBody = annotationCallArgs.body as any[];
+    expect(Array.isArray(annotationBody)).toBe(true);
+    const annotationOp = annotationBody.find(
+      (op: any) => op.path?.includes('tools-injector') && op.path?.includes('opencode'),
+    );
+    expect(annotationOp).toBeDefined();
+    expect(annotationOp.op).toBe('add');
+    expect(annotationOp.value).toBe('true');
+  });
+
+  it('skips both patches when tool is already injected (idempotency)', async () => {
+    const { getCustomObjectsApi } = await import('../../src/kube/client.js');
+
+    const mockDw = {
+      spec: {
+        template: {
+          components: [
+            { name: 'dev', container: { image: 'my-image' } },
+            { name: 'opencode-injector', container: { image: 'some-image' } },
+          ],
+        },
+      },
+    };
+    const patchSpy = vi.fn().mockResolvedValue({});
+
+    vi.mocked(getCustomObjectsApi).mockReturnValue({
+      getNamespacedCustomObject: vi.fn().mockResolvedValue(mockDw),
+      patchNamespacedCustomObject: patchSpy,
+    } as any);
+
+    const { injectToolIntoWorkspace } = await import('../../src/orchestrator/tool-injector.js');
+    await injectToolIntoWorkspace('my-workspace', 'opencode');
+
+    // No patches should be sent when already injected
+    expect(patchSpy).not.toHaveBeenCalled();
   });
 
   it('throws for unknown tool before calling the Kubernetes API', async () => {
