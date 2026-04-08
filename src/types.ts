@@ -30,3 +30,5 @@ export const EXEC_TIMEOUT_MS = 10_000;
 export const AGENT_BASE_IMAGE = 'quay.io/akurinnoy/agent-base:latest';
 
 export const TMUX_HISTORY_LIMIT = 5000;
+
+export const DEFAULT_EXEC_TIMEOUT_SECONDS = 10;
