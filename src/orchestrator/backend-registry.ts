@@ -17,8 +17,10 @@ export const BACKEND_REGISTRY: Record<string, BackendEntry> = {
     //   Uses ${OPENCODE_DEFAULT_MODEL:-google/gemini-2.5-flash} so the workspace can override
     //   via env var, falling back to gemini-2.5-flash (matches the GEMINI_API_KEY present
     //   in agent workspaces). Double-quoted so bash expands the variable at runtime.
+    // --dir /projects: sets the project root so writes inside /projects need no permission.
+    // Without it, opencode auto-rejects all file writes as "external_directory".
     launch_command: (task: string) =>
-      `opencode run --format json -m "\${OPENCODE_DEFAULT_MODEL:-google/gemini-2.5-flash}" ${shellQuote(task)}`,
+      `opencode run --format json --dir /projects -m "\${OPENCODE_DEFAULT_MODEL:-google/gemini-2.5-flash}" ${shellQuote(task)}`,
   },
   'gemini-cli': {
     required_tool: 'gemini-cli',

@@ -11,6 +11,7 @@ export function buildLaunchContext(params: LaunchContextParams): string {
   const lines = [
     `Workspace: ${workspace}`,
     branch ? `Branch: ${branch}` : null,
+    `Work directory: /projects`,
     '',
     task,
   ].filter((l): l is string => l !== null);
