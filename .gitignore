@@ -2,3 +2,4 @@ node_modules/
 dist/
 settings.local.json
 .mcp.json
+.worktrees/
