@@ -13,6 +13,7 @@ vi.mock('../../src/kube/exec.js', async (importOriginal) => {
 describe('startTerminalSession', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -114,5 +115,28 @@ describe('startTerminalSession', () => {
     await expect(
       startTerminalSession({ workspace: 'my-workspace' }),
     ).rejects.toThrow('tmux not found in container. The workspace image must include tmux.');
+  });
+
+  it('uses provided session_name when specified', async () => {
+    const { findPodForWorkspace, selectContainer, execInPod } = await import('../../src/kube/exec.js');
+
+    vi.mocked(findPodForWorkspace).mockResolvedValue({
+      podName: 'workspace-pod-123',
+      containers: ['dev-container'],
+    });
+    vi.mocked(selectContainer).mockReturnValue('dev-container');
+    vi.mocked(execInPod)
+      .mockResolvedValueOnce({ stdout: '', stderr: "can't find session", exitCode: 1 }) // has-session: not found
+      .mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }); // new-session + set-options
+
+    const { startTerminalSession } = await import('../../src/tools/start-terminal-session.js');
+    const result = await startTerminalSession({ workspace: 'my-workspace', session_name: 'custom' });
+
+    expect(result.session_name).toBe('custom');
+    expect(execInPod).toHaveBeenCalledWith(
+      'workspace-pod-123',
+      'dev-container',
+      ['tmux', 'new-session', '-d', '-s', 'custom', '-x', '200', '-y', '50'],
+    );
   });
 });
