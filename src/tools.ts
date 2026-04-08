@@ -22,6 +22,12 @@ import { getAgentOutputTool } from './tools/get-agent-output.js';
 import { stopAgentTool } from './tools/stop-agent.js';
 import { injectTool } from './tools/inject-tool.js';
 
+function toolError(error: unknown, hints?: string): { content: [{ type: 'text'; text: string }]; isError: true } {
+  const msg = (error as Error).message ?? String(error);
+  const suffix = hints ? ` ${hints}` : '';
+  return { content: [{ type: 'text', text: `Error: ${msg}${suffix}` }], isError: true };
+}
+
 export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
   const server = new McpServer({
     name: 'che-mcp-server',
@@ -37,7 +43,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const workspaces = await listWorkspaces();
         return { content: [{ type: 'text', text: JSON.stringify(workspaces, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
@@ -45,7 +51,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
   if (mode === 'full') {
     server.tool(
       'start_terminal_session',
-      'Start a bash tmux session inside a running target workspace',
+      'Start a bash tmux session inside a running target workspace. For running a single command and reading output immediately, use exec_in_workspace instead.',
       {
         workspace: z.string().describe('Target DevWorkspace name'),
         session_name: z.string().optional().describe('tmux session name (default: agent)'),
@@ -56,7 +62,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           const result = await startTerminalSession({ workspace, session_name, container });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
-          return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+          return toolError(error);
         }
       }
     );
@@ -75,7 +81,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           const result = await readTerminalOutput({ workspace, session_name, lines, container });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
-          return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+          return toolError(error);
         }
       }
     );
@@ -95,7 +101,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           const result = await sendTerminalInput({ workspace, text, session_name, enter, container });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
-          return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+          return toolError(error);
         }
       }
     );
@@ -113,7 +119,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           const result = await getTerminalState({ workspace, session_name, container });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
-          return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+          return toolError(error);
         }
       }
     );
@@ -131,7 +137,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           const result = await stopTerminalSession({ workspace, session_name, container });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
-          return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+          return toolError(error);
         }
       }
     );
@@ -151,7 +157,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           const result = await execInWorkspace({ workspace, command, timeout_seconds, session_name, container });
           return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         } catch (error) {
-          return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+          return toolError(error);
         }
       }
     );
@@ -169,7 +175,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await createWorkspace({ name, tools });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
@@ -185,14 +191,14 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await startWorkspace({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
 
   server.tool(
     'stop_workspace',
-    'Stop a running DevWorkspace (sets spec.started to false)',
+    'Stop a running DevWorkspace (sets spec.started to false). The workspace and its data are preserved — use start_workspace to resume. To permanently remove it, use delete_workspace.',
     {
       workspace: z.string().describe('DevWorkspace name to stop'),
     },
@@ -201,14 +207,14 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await stopWorkspace({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
 
   server.tool(
     'delete_workspace',
-    'Delete a DevWorkspace (regardless of current state)',
+    'Delete a DevWorkspace (regardless of current state). This is permanent and cannot be undone. To temporarily pause a workspace, use stop_workspace instead.',
     {
       workspace: z.string().describe('DevWorkspace name to delete'),
     },
@@ -217,14 +223,14 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await deleteWorkspace({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
 
   server.tool(
     'get_workspace_status',
-    'Get detailed status of a DevWorkspace (phase, conditions, URL, timestamps)',
+    'Get phase, conditions, main URL, and timestamps for a workspace. For low-level pod and container details, use get_workspace_pod.',
     {
       workspace: z.string().describe('DevWorkspace name'),
     },
@@ -233,14 +239,14 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await getWorkspaceStatus({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
 
   server.tool(
     'get_workspace_pod',
-    'Get pod details for a running DevWorkspace (pod name, phase, container status)',
+    'Get pod name, phase, and per-container status for a running workspace. For high-level workspace state (phase, URL, conditions), use get_workspace_status.',
     {
       workspace: z.string().describe('DevWorkspace name'),
     },
@@ -249,7 +255,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await getWorkspacePod({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
@@ -267,21 +273,21 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await launchCodingAgentTool({ workspace, task, agent_type });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error, 'Check get_workspace_status to see the current workspace state.');
       }
     }
   );
 
   server.tool(
     'get_agent_status',
-    'Get the current status of a coding agent running in a workspace. Returns phase (running/finished/lost/idle), last output excerpt, and ttyd URL for direct terminal access.',
+    'Get the current status of a coding agent in a workspace: phase (running/finished/lost/idle), last output excerpt, and ttyd URL for direct terminal access. To see all agents across all workspaces, use list_all_agents.',
     { workspace: z.string().describe('DevWorkspace name') },
     async ({ workspace }) => {
       try {
         const result = await getAgentStatusTool({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error, 'Use list_workspaces to verify the workspace name.');
       }
     }
   );
@@ -295,14 +301,14 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await listAllAgentsTool();
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
 
   server.tool(
     'send_message_to_agent',
-    'Send a message or instruction to a coding agent running in a workspace tmux session.',
+    "Send a message or instruction to a running coding agent. The agent receives it as terminal input. Use get_agent_status first to confirm the agent is in 'running' phase.",
     {
       workspace: z.string().describe('DevWorkspace name'),
       message: z.string().describe('Message or instruction to send to the agent'),
@@ -312,14 +318,14 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await sendMessageToAgentTool({ workspace, message });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error, 'Confirm the agent is running with get_agent_status first.');
       }
     }
   );
 
   server.tool(
     'get_agent_output',
-    'Read recent terminal output from a coding agent session in a workspace.',
+    'Read recent terminal output from the coding agent session in a workspace. For low-level tmux access or non-agent sessions, use read_terminal_output (full mode only).',
     {
       workspace: z.string().describe('DevWorkspace name'),
       lines: z.number().optional().describe('Number of lines to read (default: 50)'),
@@ -329,7 +335,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await getAgentOutputTool({ workspace, lines });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error, 'If the session is lost, re-launch with launch_coding_agent.');
       }
     }
   );
@@ -343,7 +349,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await stopAgentTool({ workspace });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error);
       }
     }
   );
@@ -360,7 +366,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         const result = await injectTool({ workspace, tool });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
-        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+        return toolError(error, 'Check available tools in create_workspace(tools=[...]) documentation.');
       }
     }
   );
