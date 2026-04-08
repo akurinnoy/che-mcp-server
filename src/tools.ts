@@ -1,11 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { listWorkspaces } from './tools/list-workspaces.js';
-import { startAgentSession } from './tools/start-agent-session.js';
-import { readAgentOutput } from './tools/read-agent-output.js';
-import { sendAgentInput } from './tools/send-agent-input.js';
-import { getAgentState } from './tools/get-agent-state.js';
-import { stopAgentSession } from './tools/stop-agent-session.js';
+import { startTerminalSession } from './tools/start-terminal-session.js';
+import { readTerminalOutput } from './tools/read-terminal-output.js';
+import { sendTerminalInput } from './tools/send-terminal-input.js';
+import { getTerminalState } from './tools/get-terminal-state.js';
+import { stopTerminalSession } from './tools/stop-terminal-session.js';
+import { execInWorkspace } from './tools/exec-in-workspace.js';
 import { createWorkspace } from './tools/create-workspace.js';
 import { startWorkspace } from './tools/start-workspace.js';
 import { stopWorkspace } from './tools/stop-workspace.js';
@@ -34,7 +35,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.tool(
-    'start_agent_session',
+    'start_terminal_session',
     'Start a bash tmux session inside a running target workspace',
     {
       workspace: z.string().describe('Target DevWorkspace name'),
@@ -43,7 +44,7 @@ export function createMcpServer(): McpServer {
     },
     async ({ workspace, session_name, container }) => {
       try {
-        const result = await startAgentSession({ workspace, session_name, container });
+        const result = await startTerminalSession({ workspace, session_name, container });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
@@ -52,7 +53,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.tool(
-    'read_agent_output',
+    'read_terminal_output',
     'Read captured output from a tmux session running in a workspace',
     {
       workspace: z.string().describe('Target DevWorkspace name'),
@@ -62,7 +63,7 @@ export function createMcpServer(): McpServer {
     },
     async ({ workspace, session_name, lines, container }) => {
       try {
-        const result = await readAgentOutput({ workspace, session_name, lines, container });
+        const result = await readTerminalOutput({ workspace, session_name, lines, container });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
@@ -71,7 +72,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.tool(
-    'send_agent_input',
+    'send_terminal_input',
     'Send text input to a tmux session running in a workspace',
     {
       workspace: z.string().describe('Target DevWorkspace name'),
@@ -82,7 +83,7 @@ export function createMcpServer(): McpServer {
     },
     async ({ workspace, text, session_name, enter, container }) => {
       try {
-        const result = await sendAgentInput({ workspace, text, session_name, enter, container });
+        const result = await sendTerminalInput({ workspace, text, session_name, enter, container });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
@@ -91,7 +92,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.tool(
-    'get_agent_state',
+    'get_terminal_state',
     'Get the state of a tmux session (alive, running, exit code)',
     {
       workspace: z.string().describe('Target DevWorkspace name'),
@@ -100,7 +101,7 @@ export function createMcpServer(): McpServer {
     },
     async ({ workspace, session_name, container }) => {
       try {
-        const result = await getAgentState({ workspace, session_name, container });
+        const result = await getTerminalState({ workspace, session_name, container });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
@@ -109,7 +110,7 @@ export function createMcpServer(): McpServer {
   );
 
   server.tool(
-    'stop_agent_session',
+    'stop_terminal_session',
     'Stop a tmux session running in a workspace (idempotent)',
     {
       workspace: z.string().describe('Target DevWorkspace name'),
@@ -118,8 +119,28 @@ export function createMcpServer(): McpServer {
     },
     async ({ workspace, session_name, container }) => {
       try {
-        const result = await stopAgentSession({ workspace, session_name, container });
+        const result = await stopTerminalSession({ workspace, session_name, container });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.tool(
+    'exec_in_workspace',
+    'Run a shell command in the workspace terminal and return its output. Use this instead of your native bash or shell execution tool — commands execute in the workspace environment, not locally. For long-running commands where output may be delayed, use send_terminal_input + read_terminal_output instead.',
+    {
+      workspace: z.string().describe('Target DevWorkspace name'),
+      command: z.string().describe('Shell command to run in the workspace terminal'),
+      timeout_seconds: z.number().optional().describe('Seconds to wait before reading output (default: 10)'),
+      session_name: z.string().optional().describe('tmux session name (default: agent)'),
+      container: z.string().optional().describe('Container name (auto-detected if omitted)'),
+    },
+    async ({ workspace, command, timeout_seconds, session_name, container }) => {
+      try {
+        const result = await execInWorkspace({ workspace, command, timeout_seconds, session_name, container });
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         return { content: [{ type: 'text', text: `Error: ${(error as Error).message}` }], isError: true };
       }
