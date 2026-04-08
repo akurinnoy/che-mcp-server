@@ -11,6 +11,8 @@ vi.mock('../../src/kube/exec.js', async (importOriginal) => {
 describe('ensureTerminalSession', () => {
   beforeEach(() => {
     vi.resetModules();
+    // vi.clearAllMocks() is needed here because vi.resetModules() alone does not reset vi.fn() call counts
+    // when the mock factory shares a reference — the same vi.fn() instance persists across tests.
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
@@ -70,5 +72,20 @@ describe('ensureTerminalSession', () => {
     await expect(
       ensureTerminalSession('pod-123', 'dev-container', 'agent'),
     ).rejects.toThrow('Failed to create tmux session: some error');
+  });
+
+  it('returns true even when set-option calls fail (session is still usable)', async () => {
+    const { execInPod } = await import('../../src/kube/exec.js');
+
+    vi.mocked(execInPod)
+      .mockResolvedValueOnce({ stdout: '', stderr: "can't find session", exitCode: 1 }) // has-session: not found
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 }) // new-session succeeds
+      .mockResolvedValueOnce({ stdout: '', stderr: 'error', exitCode: 1 }) // set-option remain-on-exit fails
+      .mockResolvedValueOnce({ stdout: '', stderr: 'error', exitCode: 1 }); // set-option history-limit fails
+
+    const { ensureTerminalSession } = await import('../../src/tools/terminal-session.js');
+    const created = await ensureTerminalSession('pod-123', 'dev-container', 'agent');
+
+    expect(created).toBe(true);
   });
 });
