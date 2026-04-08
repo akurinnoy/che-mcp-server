@@ -208,7 +208,7 @@ async function ensureWorkspaceRunning(workspace: string): Promise<void> {
 }
 
 function parseInstalledTools(annotations: Record<string, string>): string[] {
-  const prefix = 'che.eclipse.org/tools-injector/';
+  const prefix = 'che.eclipse.org/tools-injector.';
   return Object.keys(annotations)
     .filter(k => k.startsWith(prefix))
     .map(k => k.slice(prefix.length));

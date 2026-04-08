@@ -400,7 +400,7 @@ describe('injectToolIntoWorkspace', () => {
     const annotationOp = annotationBody[0];
     expect(annotationOp.op).toBe('add');
     expect(annotationOp.path).toBe('/metadata/annotations');
-    expect(annotationOp.value).toMatchObject({ 'che.eclipse.org/tools-injector/opencode': 'true' });
+    expect(annotationOp.value).toMatchObject({ 'che.eclipse.org/tools-injector.opencode': 'true' });
   });
 
   it('adds specific annotation key when metadata.annotations already exists', async () => {

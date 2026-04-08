@@ -98,7 +98,10 @@ export async function injectToolIntoWorkspace(
   // JSON Pointer requires '/' escaped as '~1'.
   // If metadata.annotations doesn't exist yet (e.g. workspace not yet started),
   // create the entire annotations object; otherwise add the specific key.
-  const annotationKey = `che.eclipse.org/tools-injector/${tool}`;
+  // Annotation key format: "che.eclipse.org/tools-injector.<tool>"
+  // Only one '/' is allowed in a Kubernetes annotation key (prefix/name).
+  // The name part cannot contain '/', so we use '.' to separate injector from tool name.
+  const annotationKey = `che.eclipse.org/tools-injector.${tool}`;
   const annotationOp: JsonPatchOp = (dw as any)?.metadata?.annotations != null
     ? { op: 'add', path: `/metadata/annotations/${annotationKey.replace(/\//g, '~1')}`, value: 'true' }
     : { op: 'add', path: '/metadata/annotations', value: { [annotationKey]: 'true' } };
