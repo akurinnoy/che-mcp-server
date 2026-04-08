@@ -79,9 +79,9 @@ describe('execInWorkspace', () => {
     vi.mocked(execInPod).mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
 
     const { execInWorkspace } = await import('../../src/tools/exec-in-workspace.js');
-    const result = await execInWorkspace({ workspace: 'my-workspace', command: 'ls', timeout_seconds: 5 });
+    const result = await execInWorkspace({ workspace: 'my-workspace', command: 'ls', timeout_seconds: 0 });
 
-    expect(result.note).toBe('Output captured after 5s. If the command is still running, use read_terminal_output to get more.');
+    expect(result.note).toBe('Output captured after 0s. If the command is still running, use read_terminal_output to get more.');
   });
 
   it('uses custom session_name when provided', async () => {
@@ -111,5 +111,23 @@ describe('execInWorkspace', () => {
     await expect(
       execInWorkspace({ workspace: 'my-workspace', command: 'pwd', timeout_seconds: 0 }),
     ).rejects.toThrow('Workspace "my-workspace" is starting');
+  });
+
+  it('throws when session dies before output can be captured', async () => {
+    const { findPodForWorkspace, selectContainer, execInPod } = await import('../../src/kube/exec.js');
+    const { ensureTerminalSession } = await import('../../src/tools/terminal-session.js');
+
+    vi.mocked(findPodForWorkspace).mockResolvedValue({ podName: 'pod', containers: ['dev'] });
+    vi.mocked(selectContainer).mockReturnValue('dev');
+    vi.mocked(ensureTerminalSession).mockResolvedValue(true);
+    vi.mocked(execInPod)
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 }) // send-keys text
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 }) // send-keys Enter
+      .mockResolvedValueOnce({ stdout: '', stderr: "can't find session: agent", exitCode: 1 }); // capture-pane fails
+
+    const { execInWorkspace } = await import('../../src/tools/exec-in-workspace.js');
+    await expect(
+      execInWorkspace({ workspace: 'my-workspace', command: 'pwd', timeout_seconds: 0 }),
+    ).rejects.toThrow('Session "agent" not found or died before output could be captured');
   });
 });

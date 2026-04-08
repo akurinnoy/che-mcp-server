@@ -32,3 +32,5 @@ export const AGENT_BASE_IMAGE = 'quay.io/akurinnoy/agent-base:latest';
 export const TMUX_HISTORY_LIMIT = 5000;
 
 export const DEFAULT_EXEC_TIMEOUT_SECONDS = 10;
+
+export const EXEC_CAPTURE_LINES = 200;

@@ -1,6 +1,6 @@
 import { findPodForWorkspace, selectContainer, execInPod } from '../kube/exec.js';
 import { ensureTerminalSession } from './terminal-session.js';
-import { DEFAULT_SESSION_NAME, DEFAULT_EXEC_TIMEOUT_SECONDS } from '../types.js';
+import { DEFAULT_SESSION_NAME, DEFAULT_EXEC_TIMEOUT_SECONDS, EXEC_CAPTURE_LINES } from '../types.js';
 
 interface ExecInWorkspaceParams {
   workspace: string;
@@ -35,8 +35,12 @@ export async function execInWorkspace(params: ExecInWorkspaceParams): Promise<Ex
   await new Promise<void>((resolve) => setTimeout(resolve, timeoutSeconds * 1000));
 
   const captureResult = await execInPod(podName, containerName, [
-    'tmux', 'capture-pane', '-t', sessionName, '-p', '-S', '-200',
+    'tmux', 'capture-pane', '-t', sessionName, '-p', '-S', `-${EXEC_CAPTURE_LINES}`,
   ]);
+
+  if (captureResult.exitCode !== 0) {
+    throw new Error(`Session "${sessionName}" not found or died before output could be captured`);
+  }
 
   return {
     output: captureResult.stdout,
