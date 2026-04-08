@@ -21,6 +21,7 @@ interface ToolEntry {
     volumeMounts: { name: string; path: string }[];
     env: { name: string; value: string }[];
     memoryLimit?: string;
+    postStart?: string;
   };
 }
 
@@ -165,6 +166,69 @@ export function buildJsonPatchOps(tool: string, dw: any): JsonPatchOp[] {
     const envPath = `/spec/template/components/${editorIdx}/container/env`;
     // At this point env array always exists (created in 3b if it was empty)
     ops.push({ op: 'add', path: `${envPath}/-`, value: envVar });
+  }
+
+  const editorName = components[editorIdx].name as string;
+
+  // 4. Add apply command (install-{tool}) — makes the injector run as an init container.
+  // If commands array doesn't exist in the workspace yet, create it; otherwise append.
+  const existingCommands: any[] | null | undefined = dw?.spec?.template?.commands;
+  const applyCommandValue = { id: `install-${tool}`, apply: { component: `${tool}-injector` } };
+  if (existingCommands != null) {
+    ops.push({ op: 'add', path: '/spec/template/commands/-', value: applyCommandValue });
+  } else {
+    ops.push({ op: 'add', path: '/spec/template/commands', value: [applyCommandValue] });
+  }
+
+  // 5. Add preStart event referencing the apply command.
+  // If the events object doesn't exist yet, create it with preStart; otherwise append to preStart.
+  const existingEvents: any | null | undefined = dw?.spec?.template?.events;
+  const existingPreStart: string[] | null | undefined = existingEvents?.preStart;
+  if (existingEvents != null && existingPreStart != null) {
+    ops.push({ op: 'add', path: '/spec/template/events/preStart/-', value: `install-${tool}` });
+  } else if (existingEvents != null) {
+    // events object exists but preStart key is absent
+    ops.push({ op: 'add', path: '/spec/template/events/preStart', value: [`install-${tool}`] });
+  } else {
+    // no events object at all — create it with preStart
+    ops.push({ op: 'add', path: '/spec/template/events', value: { preStart: [`install-${tool}`] } });
+  }
+
+  // 6. Add symlink exec command (symlink-{tool}) + postStart event.
+  // The symlink command runs in the editor container and puts the binary on PATH.
+  const binary = regTool.binary;
+  const pattern = regTool.pattern;
+  const symlinkTarget = pattern === 'init'
+    ? `/injected-tools/${binary}`
+    : `/injected-tools/${tool}/bin/${binary}`;
+
+  const pathCmd = (
+    'grep -q injected-tools /etc/profile.d/injected-tools.sh 2>/dev/null' +
+    ' || echo \'export PATH="/injected-tools/bin:$PATH"\' > /etc/profile.d/injected-tools.sh 2>/dev/null;' +
+    ' grep -q injected-tools "$HOME/.bashrc" 2>/dev/null' +
+    ' || echo \'export PATH="/injected-tools/bin:$PATH"\' >> "$HOME/.bashrc" 2>/dev/null; true'
+  );
+  let cmdline = `mkdir -p /injected-tools/bin && ln -sf ${symlinkTarget} /injected-tools/bin/${binary} && ${pathCmd}`;
+  const setupCmd = regTool.editor.postStart ?? '';
+  if (setupCmd) {
+    cmdline = `${setupCmd} && ${cmdline}`;
+  }
+
+  const symlinkCmdId = `symlink-${tool}`;
+  ops.push({
+    op: 'add',
+    path: '/spec/template/commands/-',
+    value: { id: symlinkCmdId, exec: { component: editorName, commandLine: cmdline } },
+  });
+
+  // Add postStart event. By the time we reach here the events object always exists
+  // (created in step 5 if it was absent), so we only need to check whether postStart
+  // key was already present in the *original* workspace spec.
+  const existingPostStart: string[] | null | undefined = existingEvents?.postStart;
+  if (existingPostStart != null) {
+    ops.push({ op: 'add', path: '/spec/template/events/postStart/-', value: symlinkCmdId });
+  } else {
+    ops.push({ op: 'add', path: '/spec/template/events/postStart', value: [symlinkCmdId] });
   }
 
   return ops;
