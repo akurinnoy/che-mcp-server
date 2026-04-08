@@ -1,7 +1,7 @@
 import * as k8s from '@kubernetes/client-node';
 import stream from 'stream';
 
-import { getCoreV1Api, getNamespace, getKubeConfig } from './client.js';
+import { getCoreV1Api, getCustomObjectsApi, getNamespace, getKubeConfig } from './client.js';
 import { CHE_GATEWAY_CONTAINER, EXEC_TIMEOUT_MS } from '../types.js';
 import type { ExecResult } from '../types.js';
 
@@ -21,9 +21,8 @@ export async function findPodForWorkspace(
   );
 
   if (!runningPod) {
-    throw new Error(
-      `No running pod found for workspace "${workspaceName}"`,
-    );
+    const phase = await getWorkspacePhase(workspaceName);
+    throw new WorkspaceNotReadyError(workspaceName, phase);
   }
 
   const containers = (runningPod.spec?.containers ?? []).map(
@@ -34,6 +33,61 @@ export async function findPodForWorkspace(
     podName: runningPod.metadata!.name!,
     containers,
   };
+}
+
+export class WorkspaceNotReadyError extends Error {
+  public readonly phase: string;
+  public readonly retryable: boolean;
+
+  constructor(workspaceName: string, phase: string) {
+    const retryable = phase === 'Starting';
+    const sessionHint = phase === 'Starting'
+      ? ' Any previous agent sessions have been lost — start a new agent session once the workspace is Running.'
+      : '';
+    const retryHint = retryable ? ' Retry in a few seconds.' : '';
+
+    let message: string;
+    switch (phase) {
+      case 'Starting':
+        message = `Workspace "${workspaceName}" is starting (no running pod yet).${sessionHint}${retryHint}`;
+        break;
+      case 'Stopping':
+      case 'Stopped':
+        message = `Workspace "${workspaceName}" is ${phase.toLowerCase()}.`;
+        break;
+      case 'Failed':
+        message = `Workspace "${workspaceName}" has failed.`;
+        break;
+      case 'unknown':
+        message = `Workspace "${workspaceName}" not found.`;
+        break;
+      default:
+        message = `Workspace "${workspaceName}" is in phase "${phase}" but has no running pod.${sessionHint}${retryHint}`;
+        break;
+    }
+
+    super(message);
+    this.name = 'WorkspaceNotReadyError';
+    this.phase = phase;
+    this.retryable = retryable;
+  }
+}
+
+async function getWorkspacePhase(workspaceName: string): Promise<string> {
+  try {
+    const api = getCustomObjectsApi();
+    const ns = getNamespace();
+    const dw = await api.getNamespacedCustomObject({
+      group: 'workspace.devfile.io',
+      version: 'v1alpha2',
+      namespace: ns,
+      plural: 'devworkspaces',
+      name: workspaceName,
+    }) as any;
+    return dw.status?.phase || 'Unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 export function selectContainer(

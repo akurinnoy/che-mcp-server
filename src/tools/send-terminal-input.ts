@@ -1,7 +1,7 @@
 import { findPodForWorkspace, selectContainer, execInPod } from '../kube/exec.js';
 import { DEFAULT_SESSION_NAME } from '../types.js';
 
-interface SendAgentInputParams {
+interface SendTerminalInputParams {
   workspace: string;
   text: string;
   session_name?: string;
@@ -9,7 +9,7 @@ interface SendAgentInputParams {
   container?: string;
 }
 
-export async function sendAgentInput(params: SendAgentInputParams): Promise<{ success: boolean }> {
+export async function sendTerminalInput(params: SendTerminalInputParams): Promise<{ success: boolean }> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
   const enter = params.enter !== undefined ? params.enter : true;
 

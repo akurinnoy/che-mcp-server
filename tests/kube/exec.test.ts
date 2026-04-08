@@ -5,6 +5,7 @@ import { CHE_GATEWAY_CONTAINER } from '../../src/types.js';
 // Mock the client module so findPodForWorkspace can call getCoreV1Api/getNamespace
 vi.mock('../../src/kube/client.js', () => ({
   getCoreV1Api: vi.fn(),
+  getCustomObjectsApi: vi.fn(),
   getNamespace: vi.fn().mockReturnValue('test-namespace'),
   getKubeConfig: vi.fn(),
 }));
@@ -51,8 +52,8 @@ describe('findPodForWorkspace', () => {
     });
   });
 
-  it('throws when no running pod found', async () => {
-    const { getCoreV1Api, getNamespace } = await import('../../src/kube/client.js');
+  it('throws WorkspaceNotReadyError with phase when no running pod found', async () => {
+    const { getCoreV1Api, getCustomObjectsApi, getNamespace } = await import('../../src/kube/client.js');
 
     const mockPodList = {
       items: [
@@ -69,12 +70,31 @@ describe('findPodForWorkspace', () => {
     vi.mocked(getCoreV1Api).mockReturnValue({
       listNamespacedPod: vi.fn().mockResolvedValue(mockPodList),
     } as any);
+    vi.mocked(getCustomObjectsApi).mockReturnValue({
+      getNamespacedCustomObject: vi.fn().mockResolvedValue({
+        status: { phase: 'Starting' },
+      }),
+    } as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { findPodForWorkspace, WorkspaceNotReadyError } = await import('../../src/kube/exec.js');
+    await expect(findPodForWorkspace('my-workspace')).rejects.toThrow(WorkspaceNotReadyError);
+    await expect(findPodForWorkspace('my-workspace')).rejects.toThrow('is starting');
+  });
+
+  it('throws with "not found" when workspace does not exist', async () => {
+    const { getCoreV1Api, getCustomObjectsApi, getNamespace } = await import('../../src/kube/client.js');
+
+    vi.mocked(getCoreV1Api).mockReturnValue({
+      listNamespacedPod: vi.fn().mockResolvedValue({ items: [] }),
+    } as any);
+    vi.mocked(getCustomObjectsApi).mockReturnValue({
+      getNamespacedCustomObject: vi.fn().mockRejectedValue(new Error('not found')),
+    } as any);
     vi.mocked(getNamespace).mockReturnValue('test-namespace');
 
     const { findPodForWorkspace } = await import('../../src/kube/exec.js');
-    await expect(findPodForWorkspace('my-workspace')).rejects.toThrow(
-      'No running pod found for workspace "my-workspace"',
-    );
+    await expect(findPodForWorkspace('my-workspace')).rejects.toThrow('not found');
   });
 });
 

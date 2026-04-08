@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/kube/exec.js');
 
-describe('readAgentOutput', () => {
+describe('readTerminalOutput', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
@@ -22,8 +22,8 @@ describe('readAgentOutput', () => {
       exitCode: 0,
     });
 
-    const { readAgentOutput } = await import('../../src/tools/read-agent-output.js');
-    const result = await readAgentOutput({
+    const { readTerminalOutput } = await import('../../src/tools/read-terminal-output.js');
+    const result = await readTerminalOutput({
       workspace: 'my-workspace',
     });
 
@@ -51,8 +51,8 @@ describe('readAgentOutput', () => {
       exitCode: 0,
     });
 
-    const { readAgentOutput } = await import('../../src/tools/read-agent-output.js');
-    const result = await readAgentOutput({
+    const { readTerminalOutput } = await import('../../src/tools/read-terminal-output.js');
+    const result = await readTerminalOutput({
       workspace: 'my-workspace',
       lines: 50,
     });
@@ -74,8 +74,8 @@ describe('readAgentOutput', () => {
       exitCode: 0,
     });
 
-    const { readAgentOutput } = await import('../../src/tools/read-agent-output.js');
-    await readAgentOutput({
+    const { readTerminalOutput } = await import('../../src/tools/read-terminal-output.js');
+    await readTerminalOutput({
       workspace: 'my-workspace',
     });
 
@@ -100,9 +100,9 @@ describe('readAgentOutput', () => {
       exitCode: 1,
     });
 
-    const { readAgentOutput } = await import('../../src/tools/read-agent-output.js');
+    const { readTerminalOutput } = await import('../../src/tools/read-terminal-output.js');
     await expect(
-      readAgentOutput({
+      readTerminalOutput({
         workspace: 'my-workspace',
       }),
     ).rejects.toThrow('Session "agent" not found');

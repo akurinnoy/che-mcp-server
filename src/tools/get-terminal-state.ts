@@ -1,13 +1,13 @@
 import { findPodForWorkspace, selectContainer, execInPod } from '../kube/exec.js';
 import { DEFAULT_SESSION_NAME, AgentState } from '../types.js';
 
-interface GetAgentStateParams {
+interface GetTerminalStateParams {
   workspace: string;
   session_name?: string;
   container?: string;
 }
 
-export async function getAgentState(params: GetAgentStateParams): Promise<AgentState> {
+export async function getTerminalState(params: GetTerminalStateParams): Promise<AgentState> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
 
   const { podName, containers } = await findPodForWorkspace(params.workspace);

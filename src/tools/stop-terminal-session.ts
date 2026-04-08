@@ -1,13 +1,13 @@
 import { findPodForWorkspace, selectContainer, execInPod } from '../kube/exec.js';
 import { DEFAULT_SESSION_NAME } from '../types.js';
 
-interface StopAgentSessionParams {
+interface StopTerminalSessionParams {
   workspace: string;
   session_name?: string;
   container?: string;
 }
 
-export async function stopAgentSession(params: StopAgentSessionParams): Promise<{ success: boolean }> {
+export async function stopTerminalSession(params: StopTerminalSessionParams): Promise<{ success: boolean }> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
 
   const { podName, containers } = await findPodForWorkspace(params.workspace);

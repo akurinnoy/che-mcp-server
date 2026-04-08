@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/kube/exec.js');
 
-describe('sendAgentInput', () => {
+describe('sendTerminalInput', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
@@ -22,8 +22,8 @@ describe('sendAgentInput', () => {
       exitCode: 0,
     });
 
-    const { sendAgentInput } = await import('../../src/tools/send-agent-input.js');
-    await sendAgentInput({
+    const { sendTerminalInput } = await import('../../src/tools/send-terminal-input.js');
+    await sendTerminalInput({
       workspace: 'my-workspace',
       text: 'hello world',
     });
@@ -53,8 +53,8 @@ describe('sendAgentInput', () => {
       exitCode: 0,
     });
 
-    const { sendAgentInput } = await import('../../src/tools/send-agent-input.js');
-    await sendAgentInput({
+    const { sendTerminalInput } = await import('../../src/tools/send-terminal-input.js');
+    await sendTerminalInput({
       workspace: 'my-workspace',
       text: 'ls -la',
     });
@@ -93,8 +93,8 @@ describe('sendAgentInput', () => {
       exitCode: 0,
     });
 
-    const { sendAgentInput } = await import('../../src/tools/send-agent-input.js');
-    await sendAgentInput({
+    const { sendTerminalInput } = await import('../../src/tools/send-terminal-input.js');
+    await sendTerminalInput({
       workspace: 'my-workspace',
       text: 'partial command',
       enter: false,
@@ -123,9 +123,9 @@ describe('sendAgentInput', () => {
       exitCode: 0,
     });
 
-    const { sendAgentInput } = await import('../../src/tools/send-agent-input.js');
+    const { sendTerminalInput } = await import('../../src/tools/send-terminal-input.js');
     const specialText = 'echo "test" $HOME `date`';
-    await sendAgentInput({
+    await sendTerminalInput({
       workspace: 'my-workspace',
       text: specialText,
       enter: false,
@@ -152,9 +152,9 @@ describe('sendAgentInput', () => {
       exitCode: 1,
     });
 
-    const { sendAgentInput } = await import('../../src/tools/send-agent-input.js');
+    const { sendTerminalInput } = await import('../../src/tools/send-terminal-input.js');
     await expect(
-      sendAgentInput({
+      sendTerminalInput({
         workspace: 'my-workspace',
         text: 'test',
       }),

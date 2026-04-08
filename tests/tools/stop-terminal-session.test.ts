@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../src/kube/exec.js');
+vi.mock('../../src/kube/exec.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/kube/exec.js')>();
+  return {
+    ...actual,
+    findPodForWorkspace: vi.fn(),
+    selectContainer: vi.fn(),
+    execInPod: vi.fn(),
+  };
+});
 
-describe('stopAgentSession', () => {
+describe('stopTerminalSession', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
@@ -22,8 +30,8 @@ describe('stopAgentSession', () => {
       exitCode: 0,
     });
 
-    const { stopAgentSession } = await import('../../src/tools/stop-agent-session.js');
-    const result = await stopAgentSession({
+    const { stopTerminalSession } = await import('../../src/tools/stop-terminal-session.js');
+    const result = await stopTerminalSession({
       workspace: 'my-workspace',
     });
 
@@ -49,8 +57,8 @@ describe('stopAgentSession', () => {
       exitCode: 1,
     });
 
-    const { stopAgentSession } = await import('../../src/tools/stop-agent-session.js');
-    const result = await stopAgentSession({
+    const { stopTerminalSession } = await import('../../src/tools/stop-terminal-session.js');
+    const result = await stopTerminalSession({
       workspace: 'my-workspace',
     });
 
@@ -59,17 +67,17 @@ describe('stopAgentSession', () => {
   });
 
   it('returns error when workspace is not Running', async () => {
-    const { findPodForWorkspace } = await import('../../src/kube/exec.js');
+    const { findPodForWorkspace, WorkspaceNotReadyError } = await import('../../src/kube/exec.js');
 
     vi.mocked(findPodForWorkspace).mockRejectedValue(
-      new Error('No running pod found for workspace "my-workspace"'),
+      new WorkspaceNotReadyError('my-workspace', 'Stopped'),
     );
 
-    const { stopAgentSession } = await import('../../src/tools/stop-agent-session.js');
+    const { stopTerminalSession } = await import('../../src/tools/stop-terminal-session.js');
     await expect(
-      stopAgentSession({
+      stopTerminalSession({
         workspace: 'my-workspace',
       }),
-    ).rejects.toThrow('No running pod found for workspace "my-workspace"');
+    ).rejects.toThrow('Workspace "my-workspace" is stopped');
   });
 });

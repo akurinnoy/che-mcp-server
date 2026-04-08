@@ -1,14 +1,14 @@
 import { findPodForWorkspace, selectContainer, execInPod } from '../kube/exec.js';
 import { DEFAULT_SESSION_NAME, DEFAULT_LINES } from '../types.js';
 
-interface ReadAgentOutputParams {
+interface ReadTerminalOutputParams {
   workspace: string;
   session_name?: string;
   lines?: number;
   container?: string;
 }
 
-export async function readAgentOutput(params: ReadAgentOutputParams): Promise<{ output: string; lines_returned: number }> {
+export async function readTerminalOutput(params: ReadTerminalOutputParams): Promise<{ output: string; lines_returned: number }> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
   const lines = params.lines || DEFAULT_LINES;
 
