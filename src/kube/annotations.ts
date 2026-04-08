@@ -41,23 +41,54 @@ export async function writeAgentAnnotations(
   const api = getCustomObjectsApi();
   const ns  = getNamespace();
 
-  // Null values are intentional: JSON merge patch (RFC 7396) removes keys with null values.
-  // This is used by clearAgentAnnotations to remove all agent annotations from the CR.
-  const annotations: Record<string, string | null> = {
-    [ANN_SESSION]:  values.session,
-    [ANN_TYPE]:     values.agent_type,
-    [ANN_TASK]:     values.task,
-    [ANN_LAUNCHED]: values.launched_at,
-  };
+  // @kubernetes/client-node sends application/json-patch+json for PATCH requests.
+  // Build a JSON patch array — never a merge-patch object.
+  // launchCodingAgent calls ensureWorkspaceRunning first, so metadata.annotations exists.
+  const entries: [string, string | null][] = [
+    [ANN_SESSION,  values.session],
+    [ANN_TYPE,     values.agent_type],
+    [ANN_TASK,     values.task],
+    [ANN_LAUNCHED, values.launched_at],
+  ];
+
+  const ops = entries
+    .filter(([, val]) => val !== null)
+    .map(([key, val]) => ({
+      op: 'add',
+      path: `/metadata/annotations/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`,
+      value: val as string,
+    }));
+
+  if (ops.length === 0) return;
 
   await api.patchNamespacedCustomObject({
     group: DW_GROUP, version: DW_VERSION, namespace: ns, plural: DW_PLURAL, name: workspace,
-    body: { metadata: { annotations } },
+    body: ops,
   });
 }
 
 export async function clearAgentAnnotations(workspace: string): Promise<void> {
-  await writeAgentAnnotations(workspace, {
-    session: null, agent_type: null, task: null, launched_at: null,
+  const api = getCustomObjectsApi();
+  const ns  = getNamespace();
+
+  // Read current annotations to only remove keys that actually exist.
+  const dw = await api.getNamespacedCustomObject({
+    group: DW_GROUP, version: DW_VERSION, namespace: ns, plural: DW_PLURAL, name: workspace,
+  }) as any;
+  const current: Record<string, string> = dw?.metadata?.annotations ?? {};
+
+  const keysToRemove = [ANN_SESSION, ANN_TYPE, ANN_TASK, ANN_LAUNCHED]
+    .filter(k => k in current);
+
+  if (keysToRemove.length === 0) return;
+
+  const ops = keysToRemove.map(key => ({
+    op: 'remove',
+    path: `/metadata/annotations/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`,
+  }));
+
+  await api.patchNamespacedCustomObject({
+    group: DW_GROUP, version: DW_VERSION, namespace: ns, plural: DW_PLURAL, name: workspace,
+    body: ops,
   });
 }

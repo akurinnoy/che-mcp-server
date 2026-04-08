@@ -70,7 +70,7 @@ describe('writeAgentAnnotations', () => {
     vi.restoreAllMocks();
   });
 
-  it('calls patch with the correct annotation keys and values', async () => {
+  it('sends a JSON patch array with op:add for each annotation key', async () => {
     const { getCustomObjectsApi, getNamespace } = await import('../../src/kube/client.js');
     const patchMock = vi.fn().mockResolvedValue({});
     vi.mocked(getNamespace).mockReturnValue('user-che');
@@ -87,14 +87,33 @@ describe('writeAgentAnnotations', () => {
     });
 
     expect(patchMock).toHaveBeenCalled();
-    // object-params style: single argument object with a `body` property
-    const callArg = patchMock.mock.calls[0][0];
-    expect(callArg.body.metadata.annotations).toEqual({
-      'che.eclipse.org/agent-session': 'agent',
-      'che.eclipse.org/agent-type': 'claude-code',
-      'che.eclipse.org/agent-task': 'fix bug',
-      'che.eclipse.org/agent-launched-at': '2026-04-08T10:00:00Z',
+    const body = patchMock.mock.calls[0][0].body as any[];
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.every((op: any) => op.op === 'add')).toBe(true);
+
+    const byPath = Object.fromEntries(body.map((op: any) => [op.path, op.value]));
+    expect(byPath['/metadata/annotations/che.eclipse.org~1agent-session']).toBe('agent');
+    expect(byPath['/metadata/annotations/che.eclipse.org~1agent-type']).toBe('claude-code');
+    expect(byPath['/metadata/annotations/che.eclipse.org~1agent-task']).toBe('fix bug');
+    expect(byPath['/metadata/annotations/che.eclipse.org~1agent-launched-at']).toBe('2026-04-08T10:00:00Z');
+  });
+
+  it('skips null values (does not write them)', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import('../../src/kube/client.js');
+    const patchMock = vi.fn().mockResolvedValue({});
+    vi.mocked(getNamespace).mockReturnValue('user-che');
+    vi.mocked(getCustomObjectsApi).mockReturnValue({
+      patchNamespacedCustomObject: patchMock,
+    } as any);
+
+    const { writeAgentAnnotations } = await import('../../src/kube/annotations.js');
+    await writeAgentAnnotations('my-workspace', {
+      session: 'agent', agent_type: null, task: null, launched_at: null,
     });
+
+    const body = patchMock.mock.calls[0][0].body as any[];
+    expect(body).toHaveLength(1);
+    expect(body[0].path).toContain('agent-session');
   });
 });
 
@@ -104,19 +123,45 @@ describe('clearAgentAnnotations', () => {
     vi.restoreAllMocks();
   });
 
-  it('writes all null annotation values', async () => {
+  it('sends op:remove for annotation keys that exist', async () => {
     const { getCustomObjectsApi, getNamespace } = await import('../../src/kube/client.js');
     const patchMock = vi.fn().mockResolvedValue({});
     vi.mocked(getNamespace).mockReturnValue('user-che');
     vi.mocked(getCustomObjectsApi).mockReturnValue({
+      getNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: {
+          annotations: {
+            'che.eclipse.org/agent-session': 'agent',
+            'che.eclipse.org/agent-type': 'claude-code',
+            'che.eclipse.org/agent-task': 'fix bug',
+            'che.eclipse.org/agent-launched-at': '2026-04-08T10:00:00Z',
+          },
+        },
+      }),
       patchNamespacedCustomObject: patchMock,
     } as any);
 
     const { clearAgentAnnotations } = await import('../../src/kube/annotations.js');
     await clearAgentAnnotations('my-workspace');
 
-    expect(patchMock).toHaveBeenCalled();
-    const callArg = patchMock.mock.calls[0][0];
-    expect(Object.values(callArg.body.metadata.annotations).every((v) => v === null)).toBe(true);
+    const body = patchMock.mock.calls[0][0].body as any[];
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.every((op: any) => op.op === 'remove')).toBe(true);
+    expect(body).toHaveLength(4);
+  });
+
+  it('skips patch call when no agent annotations are present', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import('../../src/kube/client.js');
+    const patchMock = vi.fn().mockResolvedValue({});
+    vi.mocked(getNamespace).mockReturnValue('user-che');
+    vi.mocked(getCustomObjectsApi).mockReturnValue({
+      getNamespacedCustomObject: vi.fn().mockResolvedValue({ metadata: { annotations: {} } }),
+      patchNamespacedCustomObject: patchMock,
+    } as any);
+
+    const { clearAgentAnnotations } = await import('../../src/kube/annotations.js');
+    await clearAgentAnnotations('my-workspace');
+
+    expect(patchMock).not.toHaveBeenCalled();
   });
 });
