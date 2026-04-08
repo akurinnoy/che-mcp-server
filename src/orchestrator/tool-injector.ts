@@ -96,14 +96,19 @@ export async function injectToolIntoWorkspace(
 
   // Write annotation so launch_coding_agent can detect that the tool is installed.
   // JSON Pointer requires '/' escaped as '~1'.
-  const annotationPath = `/metadata/annotations/che.eclipse.org~1tools-injector~1${tool}`;
+  // If metadata.annotations doesn't exist yet (e.g. workspace not yet started),
+  // create the entire annotations object; otherwise add the specific key.
+  const annotationKey = `che.eclipse.org/tools-injector/${tool}`;
+  const annotationOp: JsonPatchOp = (dw as any)?.metadata?.annotations != null
+    ? { op: 'add', path: `/metadata/annotations/${annotationKey.replace(/\//g, '~1')}`, value: 'true' }
+    : { op: 'add', path: '/metadata/annotations', value: { [annotationKey]: 'true' } };
   await api.patchNamespacedCustomObject({
     group: 'workspace.devfile.io',
     version: 'v1alpha2',
     namespace,
     plural: 'devworkspaces',
     name: workspaceName,
-    body: [{ op: 'add', path: annotationPath, value: 'true' }],
+    body: [annotationOp],
   });
 }
 

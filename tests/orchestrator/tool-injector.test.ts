@@ -376,10 +376,12 @@ describe('injectToolIntoWorkspace', () => {
     }
   });
 
-  it('writes che.eclipse.org/tools-injector/<tool> annotation after injection', async () => {
+  it('creates metadata.annotations object when annotations are absent', async () => {
     const { getCustomObjectsApi } = await import('../../src/kube/client.js');
 
+    // No metadata.annotations — typical for a just-created workspace with started:false
     const mockDw = {
+      metadata: {},
       spec: { template: { components: [{ name: 'dev', container: { image: 'my-image' } }] } },
     };
     const patchSpy = vi.fn().mockResolvedValue({});
@@ -392,16 +394,39 @@ describe('injectToolIntoWorkspace', () => {
     const { injectToolIntoWorkspace } = await import('../../src/orchestrator/tool-injector.js');
     await injectToolIntoWorkspace('my-workspace', 'opencode');
 
-    // Second patchNamespacedCustomObject call must write the annotation.
+    // Second call creates the annotations object
     expect(patchSpy).toHaveBeenCalledTimes(2);
-    const annotationCallArgs = patchSpy.mock.calls[1][0];
-    const annotationBody = annotationCallArgs.body as any[];
-    expect(Array.isArray(annotationBody)).toBe(true);
-    const annotationOp = annotationBody.find(
-      (op: any) => op.path?.includes('tools-injector') && op.path?.includes('opencode'),
-    );
-    expect(annotationOp).toBeDefined();
+    const annotationBody = patchSpy.mock.calls[1][0].body as any[];
+    const annotationOp = annotationBody[0];
     expect(annotationOp.op).toBe('add');
+    expect(annotationOp.path).toBe('/metadata/annotations');
+    expect(annotationOp.value).toMatchObject({ 'che.eclipse.org/tools-injector/opencode': 'true' });
+  });
+
+  it('adds specific annotation key when metadata.annotations already exists', async () => {
+    const { getCustomObjectsApi } = await import('../../src/kube/client.js');
+
+    const mockDw = {
+      metadata: { annotations: { 'controller.devfile.io/started-at': '123' } },
+      spec: { template: { components: [{ name: 'dev', container: { image: 'my-image' } }] } },
+    };
+    const patchSpy = vi.fn().mockResolvedValue({});
+
+    vi.mocked(getCustomObjectsApi).mockReturnValue({
+      getNamespacedCustomObject: vi.fn().mockResolvedValue(mockDw),
+      patchNamespacedCustomObject: patchSpy,
+    } as any);
+
+    const { injectToolIntoWorkspace } = await import('../../src/orchestrator/tool-injector.js');
+    await injectToolIntoWorkspace('my-workspace', 'opencode');
+
+    // Second call adds the specific annotation key
+    expect(patchSpy).toHaveBeenCalledTimes(2);
+    const annotationBody = patchSpy.mock.calls[1][0].body as any[];
+    const annotationOp = annotationBody[0];
+    expect(annotationOp.op).toBe('add');
+    expect(annotationOp.path).toContain('tools-injector');
+    expect(annotationOp.path).toContain('opencode');
     expect(annotationOp.value).toBe('true');
   });
 
