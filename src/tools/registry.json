@@ -1,0 +1,212 @@
+{
+  "registry": "quay.io/akurinnoy",
+  "tag": "next",
+  "infrastructure": {
+    "patch": [
+      {
+        "op": "add",
+        "path": "/spec/template/components/-",
+        "value": { "name": "injected-tools", "volume": { "size": "256Mi" } }
+      }
+    ]
+  },
+  "tools": {
+    "opencode": {
+      "description": "AI coding assistant by OpenCode",
+      "pattern": "init",
+      "src": "/usr/local/bin/opencode",
+      "binary": "opencode",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/spec/template/components/-",
+          "value": {
+            "name": "opencode-injector",
+            "container": {
+              "image": "quay.io/akurinnoy/tools-injector/opencode:next",
+              "command": ["/bin/cp"],
+              "args": ["/usr/local/bin/opencode", "/injected-tools/opencode"],
+              "memoryLimit": "128Mi",
+              "mountSources": false,
+              "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }]
+            }
+          }
+        }
+      ],
+      "editor": {
+        "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }],
+        "env": [],
+        "postStart": ""
+      }
+    },
+    "goose": {
+      "description": "AI coding assistant by Block",
+      "pattern": "init",
+      "src": "/usr/local/bin/goose",
+      "binary": "goose",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/spec/template/components/-",
+          "value": {
+            "name": "goose-injector",
+            "container": {
+              "image": "quay.io/akurinnoy/tools-injector/goose:next",
+              "command": ["/bin/cp"],
+              "args": ["/usr/local/bin/goose", "/injected-tools/goose"],
+              "memoryLimit": "128Mi",
+              "mountSources": false,
+              "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }]
+            }
+          }
+        }
+      ],
+      "editor": {
+        "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }],
+        "env": [],
+        "postStart": ""
+      }
+    },
+    "claude-code": {
+      "description": "Claude Code AI assistant by Anthropic",
+      "pattern": "init",
+      "src": "/usr/local/bin/claude",
+      "binary": "claude",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/spec/template/components/-",
+          "value": {
+            "name": "claude-code-injector",
+            "container": {
+              "image": "quay.io/akurinnoy/tools-injector/claude-code:next",
+              "command": ["/bin/cp"],
+              "args": ["/usr/local/bin/claude", "/injected-tools/claude"],
+              "memoryLimit": "128Mi",
+              "mountSources": false,
+              "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }]
+            }
+          }
+        }
+      ],
+      "editor": {
+        "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }],
+        "env": [{ "name": "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "value": "1" }],
+        "memoryLimit": "1024Mi",
+        "postStart": ""
+      }
+    },
+    "kilocode": {
+      "description": "Kilo Code AI assistant (VS Code extension with AI backend)",
+      "pattern": "bundle",
+      "src": "/opt/kilocode",
+      "binary": "kilo",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/spec/template/components/-",
+          "value": {
+            "name": "kilocode-injector",
+            "container": {
+              "image": "quay.io/akurinnoy/tools-injector/kilocode:next",
+              "command": ["/bin/sh"],
+              "args": ["-c", "cp -a /opt/kilocode/. /injected-tools/kilocode/"],
+              "memoryLimit": "256Mi",
+              "mountSources": false,
+              "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }]
+            }
+          }
+        }
+      ],
+      "editor": {
+        "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }],
+        "env": [],
+        "postStart": ""
+      }
+    },
+    "gemini-cli": {
+      "description": "Gemini CLI AI assistant by Google",
+      "pattern": "bundle",
+      "src": "/opt/gemini-cli",
+      "binary": "gemini",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/spec/template/components/-",
+          "value": {
+            "name": "gemini-cli-injector",
+            "container": {
+              "image": "quay.io/akurinnoy/tools-injector/gemini-cli:next",
+              "command": ["/bin/sh"],
+              "args": ["-c", "cp -a /opt/gemini-cli/. /injected-tools/gemini-cli/"],
+              "memoryLimit": "256Mi",
+              "mountSources": false,
+              "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }]
+            }
+          }
+        }
+      ],
+      "editor": {
+        "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }],
+        "env": [{ "name": "GEMINI_CLI_HOME", "value": "/tmp/gemini-home" }],
+        "postStart": "mkdir -p /tmp/gemini-home/.gemini && echo '{\"projects\":{}}' > /tmp/gemini-home/.gemini/projects.json"
+      }
+    },
+    "tmux": {
+      "description": "Terminal multiplexer",
+      "pattern": "init",
+      "src": "/usr/local/bin/tmux",
+      "binary": "tmux",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/spec/template/components/-",
+          "value": {
+            "name": "tmux-injector",
+            "container": {
+              "image": "quay.io/akurinnoy/tools-injector/tmux:next",
+              "command": ["/bin/cp"],
+              "args": ["/usr/local/bin/tmux", "/injected-tools/tmux"],
+              "memoryLimit": "128Mi",
+              "mountSources": false,
+              "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }]
+            }
+          }
+        }
+      ],
+      "editor": {
+        "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }],
+        "env": [],
+        "postStart": ""
+      }
+    },
+    "python3": {
+      "description": "Python3 interpreter",
+      "pattern": "init",
+      "src": "/usr/local/bin/python3",
+      "binary": "python3",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/spec/template/components/-",
+          "value": {
+            "name": "python3-injector",
+            "container": {
+              "image": "quay.io/akurinnoy/tools-injector/python3:next",
+              "command": ["/bin/cp"],
+              "args": ["/usr/local/bin/python3", "/injected-tools/python3"],
+              "memoryLimit": "128Mi",
+              "mountSources": false,
+              "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }]
+            }
+          }
+        }
+      ],
+      "editor": {
+        "volumeMounts": [{ "name": "injected-tools", "path": "/injected-tools" }],
+        "env": [],
+        "postStart": ""
+      }
+    }
+  }
+}

@@ -8,7 +8,7 @@
     "che-mcp-server": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/tools/registry.json dist/tools/registry.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node dist/index.js",
