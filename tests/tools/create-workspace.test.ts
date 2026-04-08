@@ -13,6 +13,7 @@ describe('createWorkspace', () => {
       createNamespacedCustomObject: vi.fn().mockResolvedValue({
         metadata: { name: 'my-workspace' },
       }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
     };
     vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
     vi.mocked(getNamespace).mockReturnValue('test-namespace');
@@ -20,7 +21,7 @@ describe('createWorkspace', () => {
     const { createWorkspace } = await import('../../src/tools/create-workspace.js');
     const result = await createWorkspace({ name: 'my-workspace' });
 
-    expect(result).toEqual({ name: 'my-workspace', started: true });
+    expect(result).toEqual({ name: 'my-workspace', started: true, tools_injected: [] });
     expect(mockApi.createNamespacedCustomObject).toHaveBeenCalledWith({
       group: 'workspace.devfile.io',
       version: 'v1alpha2',
@@ -31,7 +32,7 @@ describe('createWorkspace', () => {
         kind: 'DevWorkspace',
         metadata: { name: 'my-workspace' },
         spec: {
-          started: true,
+          started: false,
           template: {
             components: [
               {
@@ -59,6 +60,14 @@ describe('createWorkspace', () => {
         },
       },
     });
+    expect(mockApi.patchNamespacedCustomObject).toHaveBeenCalledWith({
+      group: 'workspace.devfile.io',
+      version: 'v1alpha2',
+      namespace: 'test-namespace',
+      plural: 'devworkspaces',
+      name: 'my-workspace',
+      body: { spec: { started: true } },
+    });
   });
 
   it('creates a workspace with generateName when name is omitted', async () => {
@@ -67,6 +76,7 @@ describe('createWorkspace', () => {
       createNamespacedCustomObject: vi.fn().mockResolvedValue({
         metadata: { name: 'empty-abc12' },
       }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
     };
     vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
     vi.mocked(getNamespace).mockReturnValue('test-namespace');
@@ -74,7 +84,7 @@ describe('createWorkspace', () => {
     const { createWorkspace } = await import('../../src/tools/create-workspace.js');
     const result = await createWorkspace({});
 
-    expect(result).toEqual({ name: 'empty-abc12', started: true });
+    expect(result).toEqual({ name: 'empty-abc12', started: true, tools_injected: [] });
     expect(mockApi.createNamespacedCustomObject).toHaveBeenCalledWith({
       group: 'workspace.devfile.io',
       version: 'v1alpha2',
@@ -85,7 +95,7 @@ describe('createWorkspace', () => {
         kind: 'DevWorkspace',
         metadata: { generateName: 'empty-' },
         spec: {
-          started: true,
+          started: false,
           template: {
             components: [
               {
@@ -112,6 +122,14 @@ describe('createWorkspace', () => {
           },
         },
       },
+    });
+    expect(mockApi.patchNamespacedCustomObject).toHaveBeenCalledWith({
+      group: 'workspace.devfile.io',
+      version: 'v1alpha2',
+      namespace: 'test-namespace',
+      plural: 'devworkspaces',
+      name: 'empty-abc12',
+      body: { spec: { started: true } },
     });
   });
 });
