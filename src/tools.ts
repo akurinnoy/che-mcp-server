@@ -22,6 +22,8 @@ import { getAgentOutputTool } from './tools/get-agent-output.js';
 import { stopAgentTool } from './tools/stop-agent.js';
 import { injectTool } from './tools/inject-tool.js';
 
+const TOOL_ENUM = z.enum(['claude-code', 'opencode', 'goose', 'kilocode', 'gemini-cli', 'tmux', 'python3']);
+
 export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
   const server = new McpServer({
     name: 'che-mcp-server',
@@ -32,6 +34,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     'list_workspaces',
     'List all DevWorkspaces in the user namespace with their phase, URL, and agent annotations',
     {},
+    { readOnlyHint: true },
     async () => {
       try {
         const workspaces = await listWorkspaces();
@@ -67,9 +70,11 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
       {
         workspace: z.string().describe('Target DevWorkspace name'),
         session_name: z.string().optional().describe('tmux session name (default: agent)'),
-        lines: z.number().optional().describe('Number of lines to capture (default: 50)'),
+        lines: z.number().int().min(1).max(500).default(50).optional()
+          .describe('Lines to capture (1–500, default: 50)'),
         container: z.string().optional().describe('Container name (auto-detected if omitted)'),
       },
+      { readOnlyHint: true },
       async ({ workspace, session_name, lines, container }) => {
         try {
           const result = await readTerminalOutput({ workspace, session_name, lines, container });
@@ -108,6 +113,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         session_name: z.string().optional().describe('tmux session name (default: agent)'),
         container: z.string().optional().describe('Container name (auto-detected if omitted)'),
       },
+      { readOnlyHint: true },
       async ({ workspace, session_name, container }) => {
         try {
           const result = await getTerminalState({ workspace, session_name, container });
@@ -126,6 +132,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         session_name: z.string().optional().describe('tmux session name (default: agent)'),
         container: z.string().optional().describe('Container name (auto-detected if omitted)'),
       },
+      { idempotentHint: true },
       async ({ workspace, session_name, container }) => {
         try {
           const result = await stopTerminalSession({ workspace, session_name, container });
@@ -142,7 +149,8 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
       {
         workspace: z.string().describe('Target DevWorkspace name'),
         command: z.string().describe('Shell command to run in the workspace terminal'),
-        timeout_seconds: z.number().optional().describe('Seconds to wait before reading output (default: 10)'),
+        timeout_seconds: z.number().int().min(0).max(300).default(10).optional()
+          .describe('Seconds to wait before reading output (0–300, default: 10)'),
         session_name: z.string().optional().describe('tmux session name (default: agent)'),
         container: z.string().optional().describe('Container name (auto-detected if omitted)'),
       },
@@ -162,7 +170,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     'Create a new DevWorkspace from the default empty template and start it',
     {
       name: z.string().optional().describe('Workspace name (auto-generated if omitted)'),
-      tools: z.array(z.string()).optional().describe('Tools to pre-install (e.g. ["tmux", "claude-code"])'),
+      tools: z.array(TOOL_ENUM).optional().describe('Tools to pre-install on workspace creation'),
     },
     async ({ name, tools }) => {
       try {
@@ -180,6 +188,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     {
       workspace: z.string().describe('DevWorkspace name to start'),
     },
+    { idempotentHint: true },
     async ({ workspace }) => {
       try {
         const result = await startWorkspace({ workspace });
@@ -196,6 +205,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     {
       workspace: z.string().describe('DevWorkspace name to stop'),
     },
+    { idempotentHint: true },
     async ({ workspace }) => {
       try {
         const result = await stopWorkspace({ workspace });
@@ -212,6 +222,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     {
       workspace: z.string().describe('DevWorkspace name to delete'),
     },
+    { destructiveHint: true },
     async ({ workspace }) => {
       try {
         const result = await deleteWorkspace({ workspace });
@@ -228,6 +239,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     {
       workspace: z.string().describe('DevWorkspace name'),
     },
+    { readOnlyHint: true },
     async ({ workspace }) => {
       try {
         const result = await getWorkspaceStatus({ workspace });
@@ -244,6 +256,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     {
       workspace: z.string().describe('DevWorkspace name'),
     },
+    { readOnlyHint: true },
     async ({ workspace }) => {
       try {
         const result = await getWorkspacePod({ workspace });
@@ -260,7 +273,8 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     {
       workspace: z.string().describe('Target DevWorkspace name'),
       task: z.string().describe('Task description to pass to the coding agent'),
-      agent_type: z.string().optional().describe('Agent type: claude-code (default), opencode, gemini-cli'),
+      agent_type: z.enum(['claude-code', 'opencode', 'gemini-cli']).optional()
+        .describe('Coding agent to launch (default: claude-code)'),
     },
     async ({ workspace, task, agent_type }) => {
       try {
@@ -276,6 +290,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     'get_agent_status',
     'Get the current status of a coding agent running in a workspace. Returns phase (running/finished/lost/idle), last output excerpt, and ttyd URL for direct terminal access.',
     { workspace: z.string().describe('DevWorkspace name') },
+    { readOnlyHint: true },
     async ({ workspace }) => {
       try {
         const result = await getAgentStatusTool({ workspace });
@@ -290,6 +305,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     'list_all_agents',
     'List all workspaces that have or had an active coding agent session, with their current status.',
     {},
+    { readOnlyHint: true },
     async () => {
       try {
         const result = await listAllAgentsTool();
@@ -322,8 +338,10 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     'Read recent terminal output from a coding agent session in a workspace.',
     {
       workspace: z.string().describe('DevWorkspace name'),
-      lines: z.number().optional().describe('Number of lines to read (default: 50)'),
+      lines: z.number().int().min(1).max(500).default(50).optional()
+        .describe('Lines to capture (1–500, default: 50)'),
     },
+    { readOnlyHint: true },
     async ({ workspace, lines }) => {
       try {
         const result = await getAgentOutputTool({ workspace, lines });
@@ -338,6 +356,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     'stop_agent',
     'Stop a coding agent session in a workspace and return a completion summary. Clears session intent annotations.',
     { workspace: z.string().describe('DevWorkspace name') },
+    { destructiveHint: true },
     async ({ workspace }) => {
       try {
         const result = await stopAgentTool({ workspace });
@@ -353,7 +372,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     'Inject an AI tool (claude-code, opencode, tmux, etc.) into a running workspace. Requires a workspace restart to take effect. Prefer create_workspace(tools=[...]) for new workspaces.',
     {
       workspace: z.string().describe('DevWorkspace name'),
-      tool: z.string().describe('Tool name to inject (e.g. claude-code, opencode, tmux)'),
+      tool: TOOL_ENUM.describe('Tool to inject into the workspace'),
     },
     async ({ workspace, tool }) => {
       try {
