@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { createMcpServer } from './tools.js';
+import type { ServerMode } from './types.js';
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
@@ -81,7 +82,8 @@ async function handleMcpRequest(
         if (sid) transports.delete(sid);
       };
 
-      const mcpServer = createMcpServer();
+      const mode = (process.env.CHE_MCP_MODE ?? 'orchestration') as ServerMode;
+      const mcpServer = createMcpServer(mode);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, parsedBody);
       return;
