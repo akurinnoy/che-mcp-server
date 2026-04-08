@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/kube/exec.js');
 
-describe('getAgentState', () => {
+describe('getTerminalState', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
@@ -22,8 +22,8 @@ describe('getAgentState', () => {
       exitCode: 0,
     });
 
-    const { getAgentState } = await import('../../src/tools/get-agent-state.js');
-    const result = await getAgentState({
+    const { getTerminalState } = await import('../../src/tools/get-terminal-state.js');
+    const result = await getTerminalState({
       workspace: 'my-workspace',
     });
 
@@ -53,8 +53,8 @@ describe('getAgentState', () => {
       exitCode: 0,
     });
 
-    const { getAgentState } = await import('../../src/tools/get-agent-state.js');
-    const result = await getAgentState({
+    const { getTerminalState } = await import('../../src/tools/get-terminal-state.js');
+    const result = await getTerminalState({
       workspace: 'my-workspace',
     });
 
@@ -79,8 +79,8 @@ describe('getAgentState', () => {
       exitCode: 0,
     });
 
-    const { getAgentState } = await import('../../src/tools/get-agent-state.js');
-    const result = await getAgentState({
+    const { getTerminalState } = await import('../../src/tools/get-terminal-state.js');
+    const result = await getTerminalState({
       workspace: 'my-workspace',
     });
 
@@ -105,8 +105,8 @@ describe('getAgentState', () => {
       exitCode: 1,
     });
 
-    const { getAgentState } = await import('../../src/tools/get-agent-state.js');
-    const result = await getAgentState({
+    const { getTerminalState } = await import('../../src/tools/get-terminal-state.js');
+    const result = await getTerminalState({
       workspace: 'my-workspace',
     });
 

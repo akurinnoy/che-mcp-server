@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../src/kube/exec.js');
 
-describe('stopAgentSession', () => {
+describe('stopTerminalSession', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
@@ -22,8 +22,8 @@ describe('stopAgentSession', () => {
       exitCode: 0,
     });
 
-    const { stopAgentSession } = await import('../../src/tools/stop-agent-session.js');
-    const result = await stopAgentSession({
+    const { stopTerminalSession } = await import('../../src/tools/stop-terminal-session.js');
+    const result = await stopTerminalSession({
       workspace: 'my-workspace',
     });
 
@@ -49,8 +49,8 @@ describe('stopAgentSession', () => {
       exitCode: 1,
     });
 
-    const { stopAgentSession } = await import('../../src/tools/stop-agent-session.js');
-    const result = await stopAgentSession({
+    const { stopTerminalSession } = await import('../../src/tools/stop-terminal-session.js');
+    const result = await stopTerminalSession({
       workspace: 'my-workspace',
     });
 
@@ -65,9 +65,9 @@ describe('stopAgentSession', () => {
       new Error('No running pod found for workspace "my-workspace"'),
     );
 
-    const { stopAgentSession } = await import('../../src/tools/stop-agent-session.js');
+    const { stopTerminalSession } = await import('../../src/tools/stop-terminal-session.js');
     await expect(
-      stopAgentSession({
+      stopTerminalSession({
         workspace: 'my-workspace',
       }),
     ).rejects.toThrow('No running pod found for workspace "my-workspace"');

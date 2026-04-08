@@ -5,6 +5,13 @@ import { getCoreV1Api, getNamespace, getKubeConfig } from './client.js';
 import { CHE_GATEWAY_CONTAINER, EXEC_TIMEOUT_MS } from '../types.js';
 import type { ExecResult } from '../types.js';
 
+export class WorkspaceNotReadyError extends Error {
+  constructor(workspaceName: string, phase: string) {
+    super(`Workspace "${workspaceName}" is ${phase.toLowerCase()}`);
+    this.name = 'WorkspaceNotReadyError';
+  }
+}
+
 export async function findPodForWorkspace(
   workspaceName: string,
 ): Promise<{ podName: string; containers: string[] }> {

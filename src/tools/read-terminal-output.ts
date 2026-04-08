@@ -8,7 +8,7 @@ interface ReadAgentOutputParams {
   container?: string;
 }
 
-export async function readAgentOutput(params: ReadAgentOutputParams): Promise<{ output: string; lines_returned: number }> {
+export async function readTerminalOutput(params: ReadAgentOutputParams): Promise<{ output: string; lines_returned: number }> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
   const lines = params.lines || DEFAULT_LINES;
 

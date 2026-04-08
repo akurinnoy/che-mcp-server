@@ -7,7 +7,7 @@ interface StopAgentSessionParams {
   container?: string;
 }
 
-export async function stopAgentSession(params: StopAgentSessionParams): Promise<{ success: boolean }> {
+export async function stopTerminalSession(params: StopAgentSessionParams): Promise<{ success: boolean }> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
 
   const { podName, containers } = await findPodForWorkspace(params.workspace);

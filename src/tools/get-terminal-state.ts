@@ -7,7 +7,7 @@ interface GetAgentStateParams {
   container?: string;
 }
 
-export async function getAgentState(params: GetAgentStateParams): Promise<AgentState> {
+export async function getTerminalState(params: GetAgentStateParams): Promise<AgentState> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
 
   const { podName, containers } = await findPodForWorkspace(params.workspace);

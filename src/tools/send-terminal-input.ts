@@ -9,7 +9,7 @@ interface SendAgentInputParams {
   container?: string;
 }
 
-export async function sendAgentInput(params: SendAgentInputParams): Promise<{ success: boolean }> {
+export async function sendTerminalInput(params: SendAgentInputParams): Promise<{ success: boolean }> {
   const sessionName = params.session_name || DEFAULT_SESSION_NAME;
   const enter = params.enter !== undefined ? params.enter : true;
 
