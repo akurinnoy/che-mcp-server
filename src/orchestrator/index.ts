@@ -88,7 +88,7 @@ export async function getAgentStatus(params: { workspace: string }): Promise<Age
   const state = await getTerminalState({ workspace, session_name: ann.session });
 
   if (!state.session_alive) {
-    return makeStatus(workspace, 'lost', ann, null, ann.task, null);
+    return makeStatus(workspace, 'lost', ann, null, null, null);
   }
 
   const { output } = await readTerminalOutput({ workspace, session_name: ann.session, lines: 20 });
