@@ -79,8 +79,13 @@ export async function injectToolIntoWorkspace(
     name: workspaceName,
   }) as any;
 
-  const ops = buildInjectOps(tool, dw);
-  if (ops.length === 0) return;
+  // Deep-copy current components, mutate in memory, patch back as merge patch.
+  // Avoids JSON Patch content-type issues — merge patch replaces the array.
+  const components: any[] = JSON.parse(
+    JSON.stringify(dw?.spec?.template?.components ?? []),
+  );
+
+  applyToolToComponents(tool, components);
 
   await api.patchNamespacedCustomObject({
     group: 'workspace.devfile.io',
@@ -88,84 +93,63 @@ export async function injectToolIntoWorkspace(
     namespace,
     plural: 'devworkspaces',
     name: workspaceName,
-    body: ops,
+    body: { spec: { template: { components } } },
   });
 }
 
-// ─── Patch builder ────────────────────────────────────────────────────────────
+// ─── In-memory mutation ───────────────────────────────────────────────────────
 
-function buildInjectOps(tool: string, dw: any): JsonPatchOp[] {
+export function applyToolToComponents(tool: string, components: any[]): void {
   const regTool = REGISTRY.tools[tool];
-  const components: any[] = dw?.spec?.template?.components ?? [];
-  const ops: JsonPatchOp[] = [];
 
   // 1. Add shared injected-tools volume if not already present
   const hasVolume = components.some(c => c.name === 'injected-tools');
   if (!hasVolume) {
     for (const op of REGISTRY.infrastructure.patch) {
-      ops.push(JSON.parse(JSON.stringify(op)));
+      if (op.op === 'add') components.push(JSON.parse(JSON.stringify(op.value)));
     }
   }
 
   // 2. Add injector init container (with correct image tag)
   for (const op of regTool.patch) {
-    const cloned: any = JSON.parse(JSON.stringify(op));
-    if (cloned.op === 'add' && cloned.value?.container?.image) {
-      cloned.value.container.image = toolImage(tool);
+    if (op.op === 'add') {
+      const value: any = JSON.parse(JSON.stringify(op.value));
+      if (value?.container?.image) value.container.image = toolImage(tool);
+      components.push(value);
     }
-    ops.push(cloned);
   }
 
   // 3. Find editor — first container component that is not an injector or volume
-  const editorIdx = components.findIndex(
+  const editor = components.find(
     c => c.container && !c.name.endsWith('-injector') && c.name !== 'injected-tools',
   );
+  if (!editor) return;
 
-  if (editorIdx === -1) return ops;
+  const container = editor.container;
 
-  const editorContainer = components[editorIdx].container;
-
-  // 3a. Volume mount on editor container
-  const existingMounts: any[] = editorContainer.volumeMounts ?? [];
-  const hasMount = existingMounts.some(m => m.name === 'injected-tools');
+  // 3a. Volume mount
+  if (!container.volumeMounts) container.volumeMounts = [];
+  const hasMount = container.volumeMounts.some((m: any) => m.name === 'injected-tools');
   if (!hasMount) {
     for (const vm of regTool.editor.volumeMounts) {
-      if (existingMounts.length > 0) {
-        ops.push({ op: 'add', path: `/spec/template/components/${editorIdx}/container/volumeMounts/-`, value: vm });
-      } else {
-        ops.push({ op: 'add', path: `/spec/template/components/${editorIdx}/container/volumeMounts`, value: [vm] });
-        existingMounts.push(vm);
-      }
+      container.volumeMounts.push(vm);
     }
   }
 
-  // 3b. PATH env var so /injected-tools/bin is on $PATH
-  const existingEnv: any[] = editorContainer.env ?? [];
-  const hasPath = existingEnv.some(
-    e => e.name === 'PATH' && (e.value as string)?.includes('/injected-tools/bin'),
+  // 3b. PATH env var so /injected-tools/bin is discoverable
+  if (!container.env) container.env = [];
+  const hasPath = container.env.some(
+    (e: any) => e.name === 'PATH' && (e.value as string)?.includes('/injected-tools/bin'),
   );
-  const pathVar = {
-    name: 'PATH',
-    value: '/injected-tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-  };
   if (!hasPath) {
-    if (existingEnv.length > 0) {
-      ops.push({ op: 'add', path: `/spec/template/components/${editorIdx}/container/env/-`, value: pathVar });
-    } else {
-      ops.push({ op: 'add', path: `/spec/template/components/${editorIdx}/container/env`, value: [pathVar] });
-      existingEnv.push(pathVar);
-    }
+    container.env.push({
+      name: 'PATH',
+      value: '/injected-tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+    });
   }
 
   // 3c. Tool-specific env vars
   for (const envVar of regTool.editor.env) {
-    if (existingEnv.length > 0) {
-      ops.push({ op: 'add', path: `/spec/template/components/${editorIdx}/container/env/-`, value: envVar });
-    } else {
-      ops.push({ op: 'add', path: `/spec/template/components/${editorIdx}/container/env`, value: [envVar] });
-      existingEnv.push(envVar);
-    }
+    container.env.push(envVar);
   }
-
-  return ops;
 }
