@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../src/kube/exec.js');
 
@@ -6,6 +6,12 @@ describe('readProtocolStatus', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('parses all protocol fields from exec output', async () => {
@@ -13,7 +19,7 @@ describe('readProtocolStatus', () => {
     vi.mocked(findPodForWorkspace).mockResolvedValue({ podName: 'pod-1', containers: ['dev'] });
     vi.mocked(selectContainer).mockReturnValue('dev');
 
-    const nowEpoch = Math.floor(Date.now() / 1000);
+    const nowEpoch = Math.floor(Date.now() / 1000); // deterministic with fake timers
     const heartbeatEpoch = nowEpoch - 42;
 
     vi.mocked(execInPod).mockResolvedValue({
@@ -40,9 +46,7 @@ describe('readProtocolStatus', () => {
     const status = await readProtocolStatus('my-ws', 'agent');
 
     expect(status.session_id).toBe('agent');
-    // Allow 1 second tolerance for heartbeat age
-    expect(status.heartbeat_age_seconds).toBeGreaterThanOrEqual(41);
-    expect(status.heartbeat_age_seconds).toBeLessThanOrEqual(43);
+    expect(status.heartbeat_age_seconds).toBe(42);
     expect(status.has_outbox).toBe(true);
     expect(status.has_inbox).toBe(false);
     expect(status.has_shutdown_requested).toBe(true);

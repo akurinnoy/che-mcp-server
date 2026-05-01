@@ -16,23 +16,23 @@ export async function readProtocolStatus(workspace: string, sessionId: string): 
     const { podName, containers } = await findPodForWorkspace(workspace);
     const container = selectContainer(containers);
 
-    const dir = `/projects/.agent/${sessionId}`;
     const script = [
+      'dir="$1"',
       `echo "---HEARTBEAT---"`,
-      `stat -c %Y ${dir}/heartbeat 2>/dev/null || echo "NONE"`,
+      `stat -c %Y "$dir/heartbeat" 2>/dev/null || echo "NONE"`,
       `echo "---OUTBOX---"`,
-      `test -f ${dir}/outbox.md && echo "EXISTS" || echo "NONE"`,
+      `test -f "$dir/outbox.md" && echo "EXISTS" || echo "NONE"`,
       `echo "---INBOX---"`,
-      `test -f ${dir}/inbox.md && echo "EXISTS" || echo "NONE"`,
+      `test -f "$dir/inbox.md" && echo "EXISTS" || echo "NONE"`,
       `echo "---SHUTDOWN---"`,
-      `test -f ${dir}/shutdown-requested && echo "EXISTS" || echo "NONE"`,
+      `test -f "$dir/shutdown-requested" && echo "EXISTS" || echo "NONE"`,
       `echo "---PROGRESS---"`,
-      `tail -5 ${dir}/progress.jsonl 2>/dev/null || echo "NONE"`,
+      `tail -5 "$dir/progress.jsonl" 2>/dev/null || echo "NONE"`,
       `echo "---RESULT---"`,
-      `cat ${dir}/result.json 2>/dev/null || echo "NONE"`,
+      `cat "$dir/result.json" 2>/dev/null || echo "NONE"`,
     ].join(' && ');
 
-    const result = await execInPod(podName, container, ['bash', '-c', script]);
+    const result = await execInPod(podName, container, ['bash', '-c', script, '--', `/projects/.agent/${sessionId}`]);
 
     if (result.exitCode !== 0) {
       return empty;

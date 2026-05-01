@@ -18,6 +18,7 @@ describe('getAgentStatusTool', () => {
 
     expect(result.phase).toBe('running');
     expect(result.last_output).toBe('working...');
+    expect(result.protocol).toBeNull();
   });
 
   it('returns lost status when session is gone after restart', async () => {
@@ -34,5 +35,6 @@ describe('getAgentStatusTool', () => {
 
     expect(result.phase).toBe('lost');
     expect(result.last_output).toBeNull();
+    expect(result.protocol).toBeNull();
   });
 });
