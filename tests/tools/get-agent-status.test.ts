@@ -10,6 +10,7 @@ describe('getAgentStatusTool', () => {
       workspace: 'foo', phase: 'running', agent_type: 'claude-code',
       task: 'fix bug', launched_at: '2026-04-08T10:00:00Z',
       exit_code: null, last_output: 'working...', ttyd_url: 'https://foo/ttyd',
+      protocol: null,
     });
 
     const { getAgentStatusTool } = await import('../../src/tools/get-agent-status.js');
@@ -25,6 +26,7 @@ describe('getAgentStatusTool', () => {
       workspace: 'foo', phase: 'lost', agent_type: 'claude-code',
       task: 'fix bug', launched_at: '2026-04-08T10:00:00Z',
       exit_code: null, last_output: null, ttyd_url: null,
+      protocol: null,
     });
 
     const { getAgentStatusTool } = await import('../../src/tools/get-agent-status.js');

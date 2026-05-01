@@ -9,8 +9,9 @@ import { listWorkspaces } from '../tools/list-workspaces.js';
 import { readAgentAnnotations, writeAgentAnnotations, clearAgentAnnotations } from '../kube/annotations.js';
 import { getBackendEntry, DEFAULT_AGENT_TYPE } from './backend-registry.js';
 import { buildLaunchContext } from './launch-context.js';
-import type { AgentStatus, AgentPhase } from '../types.js';
+import type { AgentStatus, AgentPhase, ProtocolStatus } from '../types.js';
 import { DEFAULT_SESSION_NAME, AGENT_TASK_MAX_BYTES, WORKSPACE_START_TIMEOUT_MS } from '../types.js';
+import { readProtocolStatus } from './protocol.js';
 import type { AgentAnnotationValues } from '../kube/annotations.js';
 
 export async function launchCodingAgent(params: {
@@ -82,23 +83,31 @@ export async function getAgentStatus(params: { workspace: string }): Promise<Age
   const ann = await readAgentAnnotations(workspace);
 
   if (!ann.session) {
-    return makeStatus(workspace, 'idle', ann, null, null, null);
+    return makeStatus(workspace, 'idle', ann, null, null, null, null);
+  }
+
+  // Try to read protocol status (best-effort)
+  let protocol: ProtocolStatus | null = null;
+  try {
+    protocol = await readProtocolStatus(workspace, ann.session);
+  } catch {
+    // Protocol reading is best-effort — never break status check
   }
 
   const state = await getTerminalState({ workspace, session_name: ann.session });
 
   if (!state.session_alive) {
-    return makeStatus(workspace, 'lost', ann, null, null, null);
+    return makeStatus(workspace, 'lost', ann, null, null, null, protocol);
   }
 
   const { output } = await readTerminalOutput({ workspace, session_name: ann.session, lines: 20 });
   const ttydUrl = await getTtydUrl(workspace);
 
   if (state.process_running) {
-    return makeStatus(workspace, 'running', ann, null, output, ttydUrl);
+    return makeStatus(workspace, 'running', ann, null, output, ttydUrl, protocol);
   }
 
-  return makeStatus(workspace, 'finished', ann, state.exit_code, output, ttydUrl);
+  return makeStatus(workspace, 'finished', ann, state.exit_code, output, ttydUrl, protocol);
 }
 
 export async function listAllAgents(params: { limit?: number; offset?: number } = {}): Promise<{
@@ -230,6 +239,7 @@ function makeStatus(
   exit_code: number | null,
   last_output: string | null,
   ttyd_url: string | null,
+  protocol: ProtocolStatus | null,
 ): AgentStatus {
   return {
     workspace,
@@ -240,6 +250,7 @@ function makeStatus(
     exit_code,
     last_output,
     ttyd_url,
+    protocol,
   };
 }
 

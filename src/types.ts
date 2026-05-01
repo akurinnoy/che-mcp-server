@@ -11,6 +11,16 @@ export interface AgentState {
   exit_code: number | null;
 }
 
+export interface ProtocolStatus {
+  session_id: string | null;
+  heartbeat_age_seconds: number | null;
+  has_outbox: boolean;
+  has_inbox: boolean;
+  has_shutdown_requested: boolean;
+  progress_tail: string[] | null;  // last 5 lines of progress.jsonl
+  result: object | null;           // parsed result.json, null if not present
+}
+
 export type AgentPhase = 'running' | 'finished' | 'lost' | 'idle';
 
 export interface AgentStatus {
@@ -22,6 +32,7 @@ export interface AgentStatus {
   exit_code: number | null;
   last_output: string | null;
   ttyd_url: string | null;
+  protocol: ProtocolStatus | null;
 }
 
 export interface BackendEntry {
