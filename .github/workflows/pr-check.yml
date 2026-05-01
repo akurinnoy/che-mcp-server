@@ -64,7 +64,7 @@ jobs:
       - name: Set tag expiration (14 days)
         run: |
           EXPIRATION=$(date -u -d '+14 days' +%s)
-          curl --fail -s -X PUT \
+          curl --fail -X PUT \
             -H "Authorization: Bearer ${{ secrets.QUAY_PASSWORD }}" \
             -H "Content-Type: application/json" \
             -d "{\"expiration\": ${EXPIRATION}}" \
