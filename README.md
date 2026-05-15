@@ -10,7 +10,7 @@ The MCP server is deployed as a service in the user namespace. Connect to it dir
 
 ```bash
 # Claude Code
-claude mcp add --transport sse che http://che-mcp-server:8080/mcp
+claude mcp add --transport http che http://che-mcp-server:8080/mcp
 
 # ZeroClaw — add to zeroclaw.toml
 [[mcp.servers]]
