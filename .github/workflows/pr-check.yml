@@ -61,11 +61,12 @@ jobs:
           push: true
           tags: ${{ env.IMAGE }}:pr-${{ github.event.pull_request.number }}
 
-      - name: Set tag expiration (14 days)
-        run: |
-          EXPIRATION=$(date -u -d '+14 days' +%s)
-          curl -s -X PUT \
-            -u "${{ secrets.QUAY_USERNAME }}:${{ secrets.QUAY_PASSWORD }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"expiration\": ${EXPIRATION}}" \
-            "https://quay.io/api/v1/repository/che-incubator/che-mcp-server/tag/pr-${{ github.event.pull_request.number }}"
+      # TODO: Enable after Quay API permissions are resolved (403 with current robot account)
+      # - name: Set tag expiration (14 days)
+      #   run: |
+      #     EXPIRATION=$(date -u -d '+14 days' +%s)
+      #     curl --fail -X PUT \
+      #       -H "Authorization: Bearer ${{ secrets.QUAY_PASSWORD }}" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"expiration\": ${EXPIRATION}}" \
+      #       "https://quay.io/api/v1/repository/che-incubator/che-mcp-server/tag/pr-${{ github.event.pull_request.number }}"

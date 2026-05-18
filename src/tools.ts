@@ -299,7 +299,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
 
   server.tool(
     'get_agent_status',
-    'Get the current status of a coding agent in a workspace: phase (running/finished/lost/idle), last output excerpt, and ttyd URL for direct terminal access. To see all agents across all workspaces, use list_all_agents.',
+    'Get the status of a coding agent in a workspace, including protocol file data (heartbeat, progress, results) if available. Returns phase (running/finished/lost/idle), last output excerpt, ttyd URL, and protocol status from worker files. To see all agents across all workspaces, use list_all_agents.',
     { workspace: z.string().describe('DevWorkspace name') },
     { readOnlyHint: true },
     async ({ workspace }) => {
