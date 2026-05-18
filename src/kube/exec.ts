@@ -17,7 +17,7 @@ export async function findPodForWorkspace(
   });
 
   const runningPod = podList.items.find(
-    (pod) => pod.status?.phase === 'Running',
+    (pod:any) => pod.status?.phase === 'Running',
   );
 
   if (!runningPod) {
@@ -26,7 +26,7 @@ export async function findPodForWorkspace(
   }
 
   const containers = (runningPod.spec?.containers ?? []).map(
-    (c) => c.name,
+    (c: any) => c.name,
   );
 
   return {
@@ -165,7 +165,7 @@ export async function execInPod(
               ? 0
               : parseInt(
                   status.details?.causes?.find(
-                    (c) => c.reason === 'ExitCode',
+                    (c:any) => c.reason === 'ExitCode',
                   )?.message ?? '1',
                   10,
                 );

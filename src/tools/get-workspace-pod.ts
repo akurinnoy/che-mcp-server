@@ -28,7 +28,7 @@ export async function getWorkspacePod(params: GetWorkspacePodParams): Promise<Wo
     namespace,
   });
 
-  const containers = (pod.status?.containerStatuses || []).map((cs) => ({
+  const containers = (pod.status?.containerStatuses || []).map((cs:any) => ({
     name: cs.name,
     ready: cs.ready,
     restartCount: cs.restartCount,
