@@ -17,7 +17,7 @@ describe('getTerminalState', () => {
     });
     vi.mocked(selectContainer).mockReturnValue('dev-container');
     vi.mocked(execInPod).mockResolvedValue({
-      stdout: '12345 0 ',
+      stdout: '12345 0 claude ',
       stderr: '',
       exitCode: 0,
     });
@@ -35,7 +35,7 @@ describe('getTerminalState', () => {
     expect(execInPod).toHaveBeenCalledWith(
       'workspace-pod-123',
       'dev-container',
-      ['tmux', 'list-panes', '-t', 'agent', '-F', '#{pane_pid} #{pane_dead} #{pane_dead_status}'],
+      ['tmux', 'list-panes', '-t', 'agent', '-F', '#{pane_pid} #{pane_dead} #{pane_current_command} #{pane_dead_status}'],
     );
   });
 
@@ -48,7 +48,7 @@ describe('getTerminalState', () => {
     });
     vi.mocked(selectContainer).mockReturnValue('dev-container');
     vi.mocked(execInPod).mockResolvedValue({
-      stdout: '12345 1 0',
+      stdout: '12345 1 bash 0',
       stderr: '',
       exitCode: 0,
     });
@@ -74,7 +74,7 @@ describe('getTerminalState', () => {
     });
     vi.mocked(selectContainer).mockReturnValue('dev-container');
     vi.mocked(execInPod).mockResolvedValue({
-      stdout: '12345 1 1',
+      stdout: '12345 1 bash 1',
       stderr: '',
       exitCode: 0,
     });

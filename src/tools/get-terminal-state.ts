@@ -14,7 +14,7 @@ export async function getTerminalState(params: GetTerminalStateParams): Promise<
   const containerName = selectContainer(containers, params.container);
 
   const result = await execInPod(podName, containerName, [
-    'tmux', 'list-panes', '-t', sessionName, '-F', '#{pane_pid} #{pane_dead} #{pane_dead_status}',
+    'tmux', 'list-panes', '-t', sessionName, '-F', '#{pane_pid} #{pane_dead} #{pane_current_command} #{pane_dead_status}',
   ]);
 
   // If exec fails, session doesn't exist
@@ -29,21 +29,12 @@ export async function getTerminalState(params: GetTerminalStateParams): Promise<
   // Parse output: "pid dead_flag exit_status"
   const parts = result.stdout.trim().split(' ');
   const paneDead = parts[1];
-  const paneDeadStatus = parts[2];
+  const paneCurrentCommand = parts[2];
+  const paneDeadStatus = parts[3];
 
-  if (paneDead === '0') {
-    // Process is running
-    return {
-      session_alive: true,
-      process_running: true,
-      exit_code: null,
-    };
-  } else {
-    // Process has exited
-    return {
-      session_alive: true,
-      process_running: false,
-      exit_code: parseInt(paneDeadStatus, 10),
-    };
+  return {
+    session_alive: true,
+    process_running: paneCurrentCommand !== "bash",
+    exit_code: paneDead === '0' ? null : parseInt(paneDeadStatus, 10),
   }
 }
