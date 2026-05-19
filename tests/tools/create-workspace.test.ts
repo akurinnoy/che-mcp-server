@@ -38,7 +38,7 @@ describe('createWorkspace', () => {
               {
                 name: 'dev',
                 container: {
-                  image: 'quay.io/akurinnoy/agent-base:latest',
+                  image: 'quay.io/che-incubator/agent-base-image:latest',
                   memoryLimit: '4Gi',
                   memoryRequest: '512Mi',
                   endpoints: [
@@ -103,7 +103,7 @@ describe('createWorkspace', () => {
               {
                 name: 'dev',
                 container: {
-                  image: 'quay.io/akurinnoy/agent-base:latest',
+                  image: 'quay.io/che-incubator/agent-base-image:latest',
                   memoryLimit: '4Gi',
                   memoryRequest: '512Mi',
                   endpoints: [
