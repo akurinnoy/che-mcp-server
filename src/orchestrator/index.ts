@@ -1,25 +1,26 @@
-import { getWorkspaceStatus } from '../tools/get-workspace-status.js';
-import { startWorkspace } from '../tools/start-workspace.js';
-import { startTerminalSession } from '../tools/start-terminal-session.js';
-import { sendTerminalInput } from '../tools/send-terminal-input.js';
-import { readTerminalOutput } from '../tools/read-terminal-output.js';
-import { getTerminalState } from '../tools/get-terminal-state.js';
-import { stopTerminalSession } from '../tools/stop-terminal-session.js';
-import { listWorkspaces } from '../tools/list-workspaces.js';
+import type { AgentAnnotationValues } from '../kube/annotations.js';
 import {
+  clearAgentAnnotations,
   readAgentAnnotations,
   writeAgentAnnotations,
-  clearAgentAnnotations,
 } from '../kube/annotations.js';
-import { getBackendEntry, DEFAULT_AGENT_TYPE } from './backend-registry.js';
-import { buildLaunchContext } from './launch-context.js';
-import type { AgentStatus, AgentPhase } from '../types.js';
+import { getUnreadCount } from '../messaging/store.js';
+import { getTerminalState } from '../tools/get-terminal-state.js';
+import { getWorkspaceStatus } from '../tools/get-workspace-status.js';
+import { listWorkspaces } from '../tools/list-workspaces.js';
+import { readTerminalOutput } from '../tools/read-terminal-output.js';
+import { sendTerminalInput } from '../tools/send-terminal-input.js';
+import { startTerminalSession } from '../tools/start-terminal-session.js';
+import { startWorkspace } from '../tools/start-workspace.js';
+import { stopTerminalSession } from '../tools/stop-terminal-session.js';
+import type { AgentPhase, AgentStatus } from '../types.js';
 import {
-  DEFAULT_SESSION_NAME,
   AGENT_TASK_MAX_BYTES,
+  DEFAULT_SESSION_NAME,
   WORKSPACE_START_TIMEOUT_MS,
 } from '../types.js';
-import type { AgentAnnotationValues } from '../kube/annotations.js';
+import { DEFAULT_AGENT_TYPE, getBackendEntry } from './backend-registry.js';
+import { buildLaunchContext } from './launch-context.js';
 
 export async function launchCodingAgent(params: {
   workspace: string;
@@ -95,8 +96,11 @@ export async function getAgentStatus(params: {
   const { workspace } = params;
   const ann = await readAgentAnnotations(workspace);
 
+  const sessionKey = ann.session ?? workspace;
+  const unread = getUnreadCount(sessionKey);
+
   if (!ann.session) {
-    return makeStatus(workspace, 'idle', ann, null, null, null);
+    return makeStatus(workspace, 'idle', ann, null, null, null, unread);
   }
 
   const state = await getTerminalState({
@@ -105,7 +109,7 @@ export async function getAgentStatus(params: {
   });
 
   if (!state.session_alive) {
-    return makeStatus(workspace, 'lost', ann, null, null, null);
+    return makeStatus(workspace, 'lost', ann, null, null, null, unread);
   }
 
   const { output } = await readTerminalOutput({
@@ -116,7 +120,7 @@ export async function getAgentStatus(params: {
   const ttydUrl = await getTtydUrl(workspace);
 
   if (state.process_running) {
-    return makeStatus(workspace, 'running', ann, null, output, ttydUrl);
+    return makeStatus(workspace, 'running', ann, null, output, ttydUrl, unread);
   }
 
   return makeStatus(
@@ -126,6 +130,7 @@ export async function getAgentStatus(params: {
     state.exit_code,
     output,
     ttydUrl,
+    unread,
   );
 }
 
@@ -283,6 +288,7 @@ function makeStatus(
   exit_code: number | null,
   last_output: string | null,
   ttyd_url: string | null,
+  unread_messages: number,
 ): AgentStatus {
   return {
     workspace,
@@ -293,6 +299,7 @@ function makeStatus(
     exit_code,
     last_output,
     ttyd_url,
+    unread_messages,
   };
 }
 

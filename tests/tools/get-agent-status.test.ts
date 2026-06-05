@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 vi.mock('../../src/orchestrator/index.js');
 
 describe('getAgentStatusTool', () => {
@@ -18,6 +19,7 @@ describe('getAgentStatusTool', () => {
       exit_code: null,
       last_output: 'working...',
       ttyd_url: 'https://foo/ttyd',
+      unread_messages: 0,
     });
 
     const { getAgentStatusTool } = await import(
@@ -40,6 +42,7 @@ describe('getAgentStatusTool', () => {
       exit_code: null,
       last_output: null,
       ttyd_url: null,
+      unread_messages: 0,
     });
 
     const { getAgentStatusTool } = await import(
@@ -49,5 +52,28 @@ describe('getAgentStatusTool', () => {
 
     expect(result.phase).toBe('lost');
     expect(result.last_output).toBeNull();
+  });
+
+  it('returns idle status with zero unread_messages', async () => {
+    const { getAgentStatus } = await import('../../src/orchestrator/index.js');
+    vi.mocked(getAgentStatus).mockResolvedValue({
+      workspace: 'bar',
+      phase: 'idle',
+      agent_type: null,
+      task: null,
+      launched_at: null,
+      exit_code: null,
+      last_output: null,
+      ttyd_url: null,
+      unread_messages: 0,
+    });
+
+    const { getAgentStatusTool } = await import(
+      '../../src/tools/get-agent-status.js'
+    );
+    const result = await getAgentStatusTool({ workspace: 'bar' });
+
+    expect(result.phase).toBe('idle');
+    expect(result.unread_messages).toBe(0);
   });
 });

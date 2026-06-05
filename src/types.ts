@@ -22,6 +22,7 @@ export interface AgentStatus {
   exit_code: number | null;
   last_output: string | null;
   ttyd_url: string | null;
+  unread_messages: number;
 }
 
 export interface BackendEntry {
