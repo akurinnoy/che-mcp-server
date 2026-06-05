@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  sendMessage,
-  receiveMessages,
-  getUnreadCount,
   clearAllInboxes,
+  getUnreadCount,
+  receiveMessages,
+  sendMessage,
 } from '../../src/messaging/store.js';
 
 describe('Message Store', () => {
@@ -54,6 +54,15 @@ describe('Message Store', () => {
     const remaining = receiveMessages('worker-1');
     expect(remaining.messages).toHaveLength(1);
     expect(remaining.messages[0].body).toBe('msg-thread-B');
+  });
+
+  it('receiveMessages with thread_id cleans up inbox when all messages match', () => {
+    sendMessage('supervisor-1', 'worker-1', 'msg-1', 'thread-A');
+    sendMessage('supervisor-1', 'worker-1', 'msg-2', 'thread-A');
+
+    const result = receiveMessages('worker-1', 'thread-A');
+    expect(result.messages).toHaveLength(2);
+    expect(getUnreadCount('worker-1')).toBe(0);
   });
 
   it('receiveMessages returns empty array when no messages', () => {
