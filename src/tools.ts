@@ -13,6 +13,7 @@ import { launchCodingAgentTool } from './tools/launch-coding-agent.js';
 import { listAllAgentsTool } from './tools/list-all-agents.js';
 import { listWorkspaces } from './tools/list-workspaces.js';
 import { readTerminalOutput } from './tools/read-terminal-output.js';
+import { receiveMessagesTool } from './tools/receive-messages.js';
 import { sendMessageTool } from './tools/send-message.js';
 import { sendMessageToAgentTool } from './tools/send-message-to-agent.js';
 import { sendTerminalInput } from './tools/send-terminal-input.js';
@@ -604,6 +605,26 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
     async ({ from, to, body, thread_id }) => {
       try {
         const result = sendMessageTool({ from, to, body, thread_id });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  server.tool(
+    'receive_messages',
+    "Read and consume messages from an agent's inbox. Messages are removed after reading.",
+    {
+      session_id: z.string().describe('Whose inbox to read'),
+      thread_id: z
+        .string()
+        .optional()
+        .describe('Filter by thread — only matching messages are consumed'),
+    },
+    async ({ session_id, thread_id }) => {
+      try {
+        const result = receiveMessagesTool({ session_id, thread_id });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return toolError(error);
