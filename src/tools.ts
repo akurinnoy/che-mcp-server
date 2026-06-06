@@ -459,7 +459,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         .optional()
         .describe('Working directory for the agent'),
       env: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe('Environment variables to set before running the command'),
     },
