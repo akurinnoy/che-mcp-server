@@ -90,6 +90,63 @@ export async function launchCodingAgent(params: {
   return { status: 'launched', workspace, session: DEFAULT_SESSION_NAME };
 }
 
+export async function launchAgent(params: {
+  workspace: string;
+  session_id: string;
+  command: string;
+  working_directory?: string;
+  env?: Record<string, string>;
+}): Promise<{ session_id: string; status: string }> {
+  const { workspace, session_id, command, working_directory, env } = params;
+
+  await ensureWorkspaceRunning(workspace);
+
+  const ann = await readAgentAnnotations(workspace);
+  if (ann.session) {
+    const state = await getTerminalState({
+      workspace,
+      session_name: ann.session,
+    });
+    if (state.session_alive) {
+      throw new Error(
+        `Session ${ann.session} is already running in workspace ${workspace}`,
+      );
+    }
+  }
+
+  await startTerminalSession({ workspace, session_name: session_id });
+
+  // Build the full command with env vars and working directory
+  const parts: string[] = [];
+  if (env) {
+    for (const [key, value] of Object.entries(env)) {
+      parts.push(`export ${key}=${JSON.stringify(value)}`);
+    }
+  }
+  if (working_directory) {
+    parts.push(`cd ${JSON.stringify(working_directory)}`);
+  }
+  parts.push(command);
+
+  const fullCommand = parts.join(' && ');
+
+  await sendTerminalInput({
+    workspace,
+    session_name: session_id,
+    text: fullCommand,
+    enter: true,
+  });
+
+  await writeAgentAnnotations(workspace, {
+    session: session_id,
+    agent_type: 'sdk-agent',
+    task: command.slice(0, AGENT_TASK_MAX_BYTES),
+    launched_at: new Date().toISOString(),
+  });
+
+  return { session_id, status: 'running' };
+}
+
 export async function getAgentStatus(params: {
   workspace: string;
 }): Promise<AgentStatus> {

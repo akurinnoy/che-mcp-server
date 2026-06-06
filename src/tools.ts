@@ -9,6 +9,7 @@ import { getTerminalState } from './tools/get-terminal-state.js';
 import { getWorkspacePod } from './tools/get-workspace-pod.js';
 import { getWorkspaceStatus } from './tools/get-workspace-status.js';
 import { injectTool } from './tools/inject-tool.js';
+import { launchAgentTool } from './tools/launch-agent.js';
 import { launchCodingAgentTool } from './tools/launch-coding-agent.js';
 import { listAllAgentsTool } from './tools/list-all-agents.js';
 import { listWorkspaces } from './tools/list-workspaces.js';
@@ -442,6 +443,39 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           error,
           'Check get_workspace_status to see the current workspace state.',
         );
+      }
+    },
+  );
+
+  server.tool(
+    'launch_agent',
+    'Launch an arbitrary agent command in a workspace. Unlike launch_coding_agent which runs specific CLI tools, this runs any command (e.g., "node /opt/agent/worker.ts") as an agent session.',
+    {
+      workspace: z.string().describe('Target DevWorkspace name'),
+      session_id: z.string().describe('Agent session identifier'),
+      command: z.string().describe('Command to execute'),
+      working_directory: z
+        .string()
+        .optional()
+        .describe('Working directory for the agent'),
+      env: z
+        .record(z.string())
+        .optional()
+        .describe('Environment variables to set before running the command'),
+    },
+    { destructiveHint: true },
+    async ({ workspace, session_id, command, working_directory, env }) => {
+      try {
+        const result = await launchAgentTool({
+          workspace,
+          session_id,
+          command,
+          working_directory,
+          env,
+        });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return toolError(error);
       }
     },
   );
