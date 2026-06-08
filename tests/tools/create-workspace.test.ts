@@ -156,4 +156,70 @@ describe('createWorkspace', () => {
       body: [{ op: 'replace', path: '/spec/started', value: true }],
     });
   });
+
+  it('uses custom image when provided', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import(
+      '../../src/kube/client.js'
+    );
+    const mockApi = {
+      createNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: { name: 'worker-ws' },
+      }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
+    };
+    vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+    const customImage = 'quay.io/my-org/worker-image:v1.0';
+    const result = await createWorkspace({
+      name: 'worker-ws',
+      image: customImage,
+    });
+
+    expect(result).toEqual({
+      name: 'worker-ws',
+      started: true,
+      tools_injected: [],
+    });
+
+    const createCall = mockApi.createNamespacedCustomObject.mock.calls[0][0];
+    const container =
+      createCall.body.spec.template.components[0].container;
+    expect(container.image).toBe(customImage);
+  });
+
+  it('uses AGENT_BASE_IMAGE when image is omitted', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import(
+      '../../src/kube/client.js'
+    );
+    const mockApi = {
+      createNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: { name: 'default-ws' },
+      }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
+    };
+    vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+    const result = await createWorkspace({ name: 'default-ws' });
+
+    expect(result).toEqual({
+      name: 'default-ws',
+      started: true,
+      tools_injected: [],
+    });
+
+    const createCall = mockApi.createNamespacedCustomObject.mock.calls[0][0];
+    const container =
+      createCall.body.spec.template.components[0].container;
+    expect(container.image).toBe(
+      'quay.io/che-incubator/agent-base-image:latest',
+    );
+  });
 });

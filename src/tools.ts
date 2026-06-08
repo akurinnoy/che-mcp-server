@@ -306,14 +306,20 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         .string()
         .optional()
         .describe('Workspace name (auto-generated if omitted)'),
+      image: z
+        .string()
+        .optional()
+        .describe(
+          'Container image to use for the workspace. Defaults to the agent base image.',
+        ),
       tools: z
         .array(TOOL_ENUM)
         .optional()
         .describe('Tools to pre-install on workspace creation'),
     },
-    async ({ name, tools }) => {
+    async ({ name, image, tools }) => {
       try {
-        const result = await createWorkspace({ name, tools });
+        const result = await createWorkspace({ name, image, tools });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return toolError(error);

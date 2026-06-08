@@ -4,6 +4,7 @@ import { injectTool } from './inject-tool.js';
 
 interface CreateWorkspaceParams {
   name?: string;
+  image?: string;
   tools?: string[];
 }
 
@@ -30,7 +31,7 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
           {
             name: 'dev',
             container: {
-              image: AGENT_BASE_IMAGE,
+              image: params.image || AGENT_BASE_IMAGE,
               memoryLimit: '8Gi',
               memoryRequest: '1Gi',
               cpuRequest: '500m',
