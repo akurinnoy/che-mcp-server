@@ -316,10 +316,16 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         .array(TOOL_ENUM)
         .optional()
         .describe('Tools to pre-install on workspace creation'),
+      node_name: z
+        .string()
+        .optional()
+        .describe(
+          'Kubernetes node name to schedule the workspace on. Use to co-locate with supervisor for shared PVC compatibility.',
+        ),
     },
-    async ({ name, image, tools }) => {
+    async ({ name, image, tools, node_name }) => {
       try {
-        const result = await createWorkspace({ name, image, tools });
+        const result = await createWorkspace({ name, image, tools, node_name });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return toolError(error);

@@ -191,6 +191,63 @@ describe('createWorkspace', () => {
     expect(container.image).toBe(customImage);
   });
 
+  it('adds pod-overrides nodeSelector when node_name is provided', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import(
+      '../../src/kube/client.js'
+    );
+    const mockApi = {
+      createNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: { name: 'pinned-ws' },
+      }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
+    };
+    vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+    await createWorkspace({
+      name: 'pinned-ws',
+      node_name: 'ip-10-0-1-42.ec2.internal',
+    });
+
+    const createCall = mockApi.createNamespacedCustomObject.mock.calls[0][0];
+    const component = createCall.body.spec.template.components[0];
+    expect(component.attributes).toEqual({
+      'pod-overrides': {
+        spec: {
+          nodeSelector: {
+            'kubernetes.io/hostname': 'ip-10-0-1-42.ec2.internal',
+          },
+        },
+      },
+    });
+  });
+
+  it('does not add pod-overrides when node_name is omitted', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import(
+      '../../src/kube/client.js'
+    );
+    const mockApi = {
+      createNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: { name: 'no-pin-ws' },
+      }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
+    };
+    vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+    await createWorkspace({ name: 'no-pin-ws' });
+
+    const createCall = mockApi.createNamespacedCustomObject.mock.calls[0][0];
+    const component = createCall.body.spec.template.components[0];
+    expect(component.attributes).toBeUndefined();
+  });
+
   it('uses AGENT_BASE_IMAGE when image is omitted', async () => {
     const { getCustomObjectsApi, getNamespace } = await import(
       '../../src/kube/client.js'

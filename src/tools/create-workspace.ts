@@ -6,6 +6,7 @@ interface CreateWorkspaceParams {
   name?: string;
   image?: string;
   tools?: string[];
+  node_name?: string;
 }
 
 export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
@@ -20,6 +21,43 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
     ? { name: params.name }
     : { generateName: 'empty-' };
 
+  const devComponent: Record<string, unknown> = {
+    name: 'dev',
+    container: {
+      image: params.image || AGENT_BASE_IMAGE,
+      memoryLimit: '8Gi',
+      memoryRequest: '1Gi',
+      cpuRequest: '500m',
+      cpuLimit: '2000m',
+      endpoints: [
+        {
+          name: 'ttyd-terminal',
+          targetPort: 7681,
+          exposure: 'public',
+          protocol: 'https',
+          attributes: {
+            type: 'main',
+            cookiesAuthEnabled: true,
+            discoverable: false,
+            urlRewriteSupported: true,
+          },
+        },
+      ],
+    },
+  };
+
+  if (params.node_name) {
+    devComponent.attributes = {
+      'pod-overrides': {
+        spec: {
+          nodeSelector: {
+            'kubernetes.io/hostname': params.node_name,
+          },
+        },
+      },
+    };
+  }
+
   const body = {
     apiVersion: 'workspace.devfile.io/v1alpha2',
     kind: 'DevWorkspace',
@@ -27,32 +65,7 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
     spec: {
       started: false,
       template: {
-        components: [
-          {
-            name: 'dev',
-            container: {
-              image: params.image || AGENT_BASE_IMAGE,
-              memoryLimit: '8Gi',
-              memoryRequest: '1Gi',
-              cpuRequest: '500m',
-              cpuLimit: '2000m',
-              endpoints: [
-                {
-                  name: 'ttyd-terminal',
-                  targetPort: 7681,
-                  exposure: 'public',
-                  protocol: 'https',
-                  attributes: {
-                    type: 'main',
-                    cookiesAuthEnabled: true,
-                    discoverable: false,
-                    urlRewriteSupported: true,
-                  },
-                },
-              ],
-            },
-          },
-        ],
+        components: [devComponent],
       },
     },
   };
