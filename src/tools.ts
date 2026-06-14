@@ -322,10 +322,19 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         .describe(
           'Kubernetes node name to schedule the workspace on. Use to co-locate with supervisor for shared PVC compatibility.',
         ),
+      project: z
+        .object({
+          repo_url: z.string().describe('HTTPS clone URL of the git repository'),
+          ref: z.string().optional().describe('Branch or tag name (defaults to repo default branch)'),
+          commit_sha: z.string().optional().describe('Full 40-character commit SHA to pin the workspace to'),
+          checkout_path: z.string().optional().describe('Absolute path inside workspace (defaults to /projects/<repo-name>)'),
+        })
+        .optional()
+        .describe('Git project to clone into the workspace via starterProjects. When commit_sha is provided, a postStart lifecycle pins to that exact commit.'),
     },
-    async ({ name, image, tools, node_name }) => {
+    async ({ name, image, tools, node_name, project }) => {
       try {
-        const result = await createWorkspace({ name, image, tools, node_name });
+        const result = await createWorkspace({ name, image, tools, node_name, project });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return toolError(error);

@@ -7,6 +7,33 @@ interface CreateWorkspaceParams {
   image?: string;
   tools?: string[];
   node_name?: string;
+  project?: {
+    repo_url: string;
+    ref?: string;
+    commit_sha?: string;
+    checkout_path?: string;
+  };
+}
+
+function deriveProjectName(repoUrl: string): string {
+  const pathname = new URL(repoUrl).pathname;
+  const basename = pathname.split('/').pop() || 'project';
+  return basename.replace(/\.git$/, '');
+}
+
+function buildStarterProject(project: NonNullable<CreateWorkspaceParams['project']>): Record<string, unknown> {
+  const name = deriveProjectName(project.repo_url);
+  const entry: Record<string, unknown> = {
+    name,
+    git: {
+      remotes: { origin: project.repo_url },
+      ...(project.ref ? { checkoutFrom: { revision: project.ref } } : {}),
+    },
+  };
+  if (project.checkout_path) {
+    entry.clonePath = project.checkout_path.replace(/^\/projects\//, '');
+  }
+  return entry;
 }
 
 export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
@@ -48,6 +75,7 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
 
   if (params.node_name) {
     devComponent.attributes = {
+      ...(devComponent.attributes as Record<string, unknown> || {}),
       'pod-overrides': {
         spec: {
           nodeSelector: {
@@ -58,6 +86,26 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
     };
   }
 
+  if (params.project?.commit_sha) {
+    const checkoutPath = params.project.checkout_path || `/projects/${deriveProjectName(params.project.repo_url)}`;
+    devComponent.attributes = {
+      ...(devComponent.attributes as Record<string, unknown> || {}),
+      'container-overrides': {
+        lifecycle: {
+          postStart: {
+            exec: {
+              command: ['sh', '-c', `cd ${checkoutPath} && git checkout ${params.project.commit_sha}`],
+            },
+          },
+        },
+      },
+    };
+  }
+
+  const starterProjects = params.project
+    ? [buildStarterProject(params.project)]
+    : undefined;
+
   const body = {
     apiVersion: 'workspace.devfile.io/v1alpha2',
     kind: 'DevWorkspace',
@@ -65,6 +113,7 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
     spec: {
       started: false,
       template: {
+        ...(starterProjects ? { starterProjects } : {}),
         components: [devComponent],
       },
     },
