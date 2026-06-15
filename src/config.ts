@@ -5,6 +5,8 @@ export interface ServerConfig {
 
 const DEFAULT_PORT = 8080;
 
+export const DATA_DIR = process.env.CHE_MCP_DATA_DIR ?? '/data';
+
 export function parseConfig(argv: string[]): ServerConfig {
   const transportArg = getArgValue(argv, '--transport');
   const portArg = getArgValue(argv, '--port');
