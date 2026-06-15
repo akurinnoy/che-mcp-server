@@ -1,3 +1,14 @@
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { join } from 'node:path';
+import { DATA_DIR } from '../config.js';
+
 export interface Message {
   message_id: string;
   from: string;
@@ -7,7 +18,42 @@ export interface Message {
   timestamp: string;
 }
 
+let currentDataDir: string | null = null;
 const inboxes = new Map<string, Message[]>();
+
+export function initStore(dataDir: string): void {
+  currentDataDir = dataDir;
+  mkdirSync(dataDir, { recursive: true });
+  inboxes.clear();
+
+  const tmpPath = join(dataDir, 'messages.json.tmp');
+  const mainPath = join(dataDir, 'messages.json');
+
+  if (existsSync(tmpPath) && !existsSync(mainPath)) {
+    renameSync(tmpPath, mainPath);
+  }
+
+  if (existsSync(mainPath)) {
+    try {
+      const raw = readFileSync(mainPath, 'utf-8');
+      const parsed = JSON.parse(raw) as Record<string, Message[]>;
+      for (const [key, value] of Object.entries(parsed)) {
+        inboxes.set(key, value);
+      }
+    } catch {
+      console.error('Warning: could not load store, starting empty');
+    }
+  }
+}
+
+function flushToDisk(): void {
+  if (!currentDataDir) return;
+  const data = JSON.stringify(Object.fromEntries(inboxes));
+  const tmpPath = join(currentDataDir, 'messages.json.tmp');
+  const mainPath = join(currentDataDir, 'messages.json');
+  writeFileSync(tmpPath, data, 'utf-8');
+  renameSync(tmpPath, mainPath);
+}
 
 export function sendMessage(
   from: string,
@@ -33,6 +79,8 @@ export function sendMessage(
   } else {
     inboxes.set(to, [message]);
   }
+
+  if (currentDataDir) flushToDisk();
 
   return { message_id, thread_id: resolvedThreadId };
 }
@@ -61,10 +109,12 @@ export function receiveMessages(
     } else {
       inboxes.set(sessionId, remaining);
     }
+    if (currentDataDir) flushToDisk();
     return { messages: matching };
   }
 
   inboxes.delete(sessionId);
+  if (currentDataDir) flushToDisk();
   return { messages: inbox };
 }
 
@@ -75,4 +125,10 @@ export function getUnreadCount(sessionId: string): number {
 
 export function clearAllInboxes(): void {
   inboxes.clear();
+  if (!currentDataDir) return;
+  rmSync(join(currentDataDir, 'messages.json'), { force: true });
+}
+
+if (!process.env.VITEST) {
+  initStore(DATA_DIR);
 }
