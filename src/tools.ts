@@ -331,10 +331,14 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         })
         .optional()
         .describe('Git project to clone into the workspace via starterProjects. When commit_sha is provided, a postStart lifecycle pins to that exact commit.'),
+      labels: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe('Kubernetes labels to apply to the DevWorkspace CR metadata'),
     },
-    async ({ name, image, tools, node_name, project }) => {
+    async ({ name, image, tools, node_name, project, labels }) => {
       try {
-        const result = await createWorkspace({ name, image, tools, node_name, project });
+        const result = await createWorkspace({ name, image, tools, node_name, project, labels });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return toolError(error);

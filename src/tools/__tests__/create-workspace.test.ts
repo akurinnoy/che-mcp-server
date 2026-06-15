@@ -136,4 +136,25 @@ describe('createWorkspace', () => {
     expect(devComponent.attributes['pod-overrides']).toBeDefined();
     expect(devComponent.attributes['container-overrides'].lifecycle.postStart).toBeDefined();
   });
+
+  it('applies labels to DevWorkspace metadata when provided', async () => {
+    await createWorkspace({
+      name: 'labeled',
+      labels: {
+        'supervisor-run-id': 'abc-123',
+        'worker-id': 'task-3',
+      },
+    });
+    const body = mockApi.createNamespacedCustomObject.mock.calls[0][0].body;
+    expect(body.metadata.labels).toEqual({
+      'supervisor-run-id': 'abc-123',
+      'worker-id': 'task-3',
+    });
+  });
+
+  it('does not add labels field when labels param is omitted', async () => {
+    await createWorkspace({ name: 'no-labels' });
+    const body = mockApi.createNamespacedCustomObject.mock.calls[0][0].body;
+    expect(body.metadata.labels).toBeUndefined();
+  });
 });

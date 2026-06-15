@@ -38,7 +38,12 @@ describe('createWorkspace', () => {
       body: {
         apiVersion: 'workspace.devfile.io/v1alpha2',
         kind: 'DevWorkspace',
-        metadata: { name: 'my-workspace' },
+        metadata: {
+          name: 'my-workspace',
+          annotations: {
+            'controller.devfile.io/storage-type': 'ephemeral',
+          },
+        },
         spec: {
           started: false,
           template: {
@@ -113,7 +118,12 @@ describe('createWorkspace', () => {
       body: {
         apiVersion: 'workspace.devfile.io/v1alpha2',
         kind: 'DevWorkspace',
-        metadata: { generateName: 'empty-' },
+        metadata: {
+          generateName: 'empty-',
+          annotations: {
+            'controller.devfile.io/storage-type': 'ephemeral',
+          },
+        },
         spec: {
           started: false,
           template: {

@@ -13,6 +13,7 @@ interface CreateWorkspaceParams {
     commit_sha?: string;
     checkout_path?: string;
   };
+  labels?: Record<string, string>;
 }
 
 function deriveProjectName(repoUrl: string): string {
@@ -49,6 +50,7 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
     annotations: {
       'controller.devfile.io/storage-type': 'ephemeral',
     },
+    ...(params.labels ? { labels: params.labels } : {}),
   };
 
   const devComponent: Record<string, unknown> = {
