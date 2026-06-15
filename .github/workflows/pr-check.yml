@@ -30,7 +30,7 @@ jobs:
     permissions:
       pull-requests: write
     env:
-      IMAGE: quay.io/che-incubator/che-mcp-server
+      IMAGE: quay.io/${{ vars.QUAY_ORG }}/che-mcp-server
     steps:
       - uses: actions/checkout@v4
 
@@ -71,7 +71,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.QUAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"expiration\": ${EXPIRATION}}" \
-            "https://quay.io/api/v1/repository/che-incubator/che-mcp-server/tag/pr-${{ github.event.pull_request.number }}"
+            "https://quay.io/api/v1/repository/${{ vars.QUAY_ORG }}/che-mcp-server/tag/pr-${{ github.event.pull_request.number }}"
 
       - name: Comment image tag on PR
         env:

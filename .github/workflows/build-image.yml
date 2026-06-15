@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE: quay.io/che-incubator/che-mcp-server
+  IMAGE: quay.io/${{ vars.QUAY_ORG }}/che-mcp-server
   TAG: next
 
 jobs:
