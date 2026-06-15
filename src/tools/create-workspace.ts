@@ -44,9 +44,12 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
   const api = getCustomObjectsApi();
   const namespace = getNamespace();
 
-  const metadata: Record<string, string> = params.name
-    ? { name: params.name }
-    : { generateName: 'empty-' };
+  const metadata: Record<string, unknown> = {
+    ...(params.name ? { name: params.name } : { generateName: 'empty-' }),
+    annotations: {
+      'controller.devfile.io/storage-type': 'ephemeral',
+    },
+  };
 
   const devComponent: Record<string, unknown> = {
     name: 'dev',
