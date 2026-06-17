@@ -1,10 +1,21 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { clearAllInboxes, sendMessage } from '../../src/messaging/store.js';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { clearAllInboxes, initStore, sendMessage } from '../../src/messaging/store.js';
 import { receiveMessagesTool } from '../../src/tools/receive-messages.js';
 
 describe('receiveMessagesTool', () => {
+  let tmpDir: string;
+
   beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'receive-messages-test-'));
+    initStore(tmpDir);
+  });
+
+  afterEach(() => {
     clearAllInboxes();
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 
   it('returns and consumes messages for a session', () => {
