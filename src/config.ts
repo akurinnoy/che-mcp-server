@@ -28,3 +28,5 @@ function getArgValue(argv: string[], flag: string): string | undefined {
   if (index === -1 || index + 1 >= argv.length) return undefined;
   return argv[index + 1];
 }
+
+export const DATA_DIR = process.env.CHE_MCP_DATA_DIR ?? '/data';
