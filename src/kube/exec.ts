@@ -1,5 +1,5 @@
 import * as k8s from '@kubernetes/client-node';
-import stream from 'stream';
+import stream from 'node:stream';
 
 import {
   getCoreV1Api,
