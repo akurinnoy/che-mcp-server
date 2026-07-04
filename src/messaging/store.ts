@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { DATA_DIR } from '../config.js';
 
@@ -71,8 +78,8 @@ export function receiveMessages(
   }
 
   if (threadId) {
-    const matching = inbox.filter(m => m.thread_id === threadId);
-    const remaining = inbox.filter(m => m.thread_id !== threadId);
+    const matching = inbox.filter((m) => m.thread_id === threadId);
+    const remaining = inbox.filter((m) => m.thread_id !== threadId);
     if (remaining.length === 0) {
       inboxes.delete(sessionId);
     } else {

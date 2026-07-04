@@ -2,7 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { clearAllInboxes, initStore, sendMessage } from '../../src/messaging/store.js';
+import {
+  clearAllInboxes,
+  initStore,
+  sendMessage,
+} from '../../src/messaging/store.js';
 import { receiveMessagesTool } from '../../src/tools/receive-messages.js';
 
 describe('receiveMessagesTool', () => {
