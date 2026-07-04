@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { createMcpServer } from './tools.js';
 import type { ServerMode } from './types.js';
+import { getCoreV1Api } from './kube/client.js';
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
@@ -12,8 +13,19 @@ export async function startHttpServer(port: number): Promise<http.Server> {
     const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
 
     if (url.pathname === '/healthz' && req.method === 'GET') {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('OK');
+      try {
+        await getCoreV1Api().listNamespace({ limit: 1 });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok' }));
+      } catch (err) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            status: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          }),
+        );
+      }
       return;
     }
 
