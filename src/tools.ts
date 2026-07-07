@@ -299,7 +299,7 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
 
   server.tool(
     'create_workspace',
-    'Create a new DevWorkspace from the default empty template and start it',
+    'Create a new DevWorkspace from the default empty template and start it. Optionally clone a git repository into the workspace via the project parameter.',
     {
       name: z
         .string()
@@ -309,10 +309,30 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         .array(TOOL_ENUM)
         .optional()
         .describe('Tools to pre-install on workspace creation'),
+      project: z
+        .object({
+          repo_url: z
+            .string()
+            .describe('HTTPS clone URL of the git repository'),
+          ref: z
+            .string()
+            .optional()
+            .describe('Branch or tag name (defaults to repo default branch)'),
+          checkout_path: z
+            .string()
+            .optional()
+            .describe(
+              'Absolute path inside workspace (defaults to /projects/<repo-name>)',
+            ),
+        })
+        .optional()
+        .describe(
+          'Git project to clone into the workspace via starterProjects.',
+        ),
     },
-    async ({ name, tools }) => {
+    async ({ name, tools, project }) => {
       try {
-        const result = await createWorkspace({ name, tools });
+        const result = await createWorkspace({ name, tools, project });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return toolError(error);
