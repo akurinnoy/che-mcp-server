@@ -267,4 +267,39 @@ describe('createWorkspace', () => {
     body = mockApi.createNamespacedCustomObject.mock.calls[1][0].body;
     expect(body.spec.template.projects[0].name).toBe('repo');
   });
+
+  describe('deriveProjectName', () => {
+    it('lowercases uppercase letters', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/MyApp.git')).toBe('myapp');
+    });
+
+    it('replaces underscores and dots with hyphens', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/my_cool.app')).toBe('my-cool-app');
+    });
+
+    it('collapses consecutive hyphens', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/a--b__c..d')).toBe('a-b-c-d');
+    });
+
+    it('strips leading and trailing hyphens', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/-my-app-.git')).toBe('my-app');
+    });
+
+    it('truncates to 63 characters without trailing hyphen', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      const long = 'a'.repeat(70);
+      const result = deriveProjectName(`https://github.com/org/${long}`);
+      expect(result.length).toBeLessThanOrEqual(63);
+      expect(result).toMatch(/[a-z0-9]$/);
+    });
+
+    it('falls back to "project" when name is empty after sanitization', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/---.git')).toBe('project');
+    });
+  });
 });

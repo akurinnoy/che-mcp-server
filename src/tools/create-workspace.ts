@@ -12,7 +12,15 @@ interface CreateWorkspaceParams {
 export function deriveProjectName(repoUrl: string): string {
   const stripped = repoUrl.replace(/\/+$/, '');
   const lastSegment = stripped.split('/').pop() ?? 'project';
-  return lastSegment.replace(/\.git$/, '');
+  const name = lastSegment
+    .replace(/\.git$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 63)
+    .replace(/-+$/, '');
+  return name || 'project';
 }
 
 export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
@@ -98,6 +106,9 @@ export async function createWorkspace(params: CreateWorkspaceParams): Promise<{
     injected.push(tool);
   }
 
+  // Start workspace after all patches applied.
+  // Must use JSON patch array — @kubernetes/client-node sends application/json-patch+json,
+  // which requires an array body (not a merge-patch object).
   await api.patchNamespacedCustomObject({
     group: 'workspace.devfile.io',
     version: 'v1alpha2',
