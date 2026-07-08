@@ -156,4 +156,150 @@ describe('createWorkspace', () => {
       body: [{ op: 'replace', path: '/spec/started', value: true }],
     });
   });
+
+  it('creates a workspace with repo_url and projects entry', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import(
+      '../../src/kube/client.js'
+    );
+    const mockApi = {
+      createNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: { name: 'my-workspace' },
+      }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
+    };
+    vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+    const result = await createWorkspace({
+      name: 'my-workspace',
+      repo_url: 'https://github.com/org/my-app.git',
+    });
+
+    expect(result).toEqual({
+      name: 'my-workspace',
+      started: true,
+      tools_injected: [],
+    });
+
+    const body = mockApi.createNamespacedCustomObject.mock.calls[0][0].body;
+    expect(body.spec.template.projects).toEqual([
+      {
+        name: 'my-app',
+        git: {
+          remotes: { origin: 'https://github.com/org/my-app.git' },
+        },
+      },
+    ]);
+  });
+
+  it('creates a workspace with repo_url and branch', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import(
+      '../../src/kube/client.js'
+    );
+    const mockApi = {
+      createNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: { name: 'my-workspace' },
+      }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
+    };
+    vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+    await createWorkspace({
+      name: 'my-workspace',
+      repo_url: 'https://github.com/org/my-app',
+      branch: 'feature-branch',
+    });
+
+    const body = mockApi.createNamespacedCustomObject.mock.calls[0][0].body;
+    expect(body.spec.template.projects).toEqual([
+      {
+        name: 'my-app',
+        git: {
+          remotes: { origin: 'https://github.com/org/my-app' },
+          checkoutFrom: { revision: 'feature-branch' },
+        },
+      },
+    ]);
+  });
+
+  it('throws when branch is provided without repo_url', async () => {
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+
+    await expect(
+      createWorkspace({ branch: 'main' }),
+    ).rejects.toThrow('branch requires repo_url');
+  });
+
+  it('derives project name from repo_url correctly', async () => {
+    const { getCustomObjectsApi, getNamespace } = await import(
+      '../../src/kube/client.js'
+    );
+    const mockApi = {
+      createNamespacedCustomObject: vi.fn().mockResolvedValue({
+        metadata: { name: 'ws' },
+      }),
+      patchNamespacedCustomObject: vi.fn().mockResolvedValue({}),
+    };
+    vi.mocked(getCustomObjectsApi).mockReturnValue(mockApi as any);
+    vi.mocked(getNamespace).mockReturnValue('test-namespace');
+
+    const { createWorkspace } = await import(
+      '../../src/tools/create-workspace.js'
+    );
+
+    // Trailing slash
+    await createWorkspace({ name: 'ws', repo_url: 'https://github.com/org/trailing/' });
+    let body = mockApi.createNamespacedCustomObject.mock.calls[0][0].body;
+    expect(body.spec.template.projects[0].name).toBe('trailing');
+
+    // Nested path with .git
+    mockApi.createNamespacedCustomObject.mockResolvedValue({ metadata: { name: 'ws' } });
+    await createWorkspace({ name: 'ws', repo_url: 'https://gitlab.com/group/sub/repo.git' });
+    body = mockApi.createNamespacedCustomObject.mock.calls[1][0].body;
+    expect(body.spec.template.projects[0].name).toBe('repo');
+  });
+
+  describe('deriveProjectName', () => {
+    it('lowercases uppercase letters', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/MyApp.git')).toBe('myapp');
+    });
+
+    it('replaces underscores and dots with hyphens', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/my_cool.app')).toBe('my-cool-app');
+    });
+
+    it('collapses consecutive hyphens', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/a--b__c..d')).toBe('a-b-c-d');
+    });
+
+    it('strips leading and trailing hyphens', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/-my-app-.git')).toBe('my-app');
+    });
+
+    it('truncates to 63 characters without trailing hyphen', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      const long = 'a'.repeat(70);
+      const result = deriveProjectName(`https://github.com/org/${long}`);
+      expect(result.length).toBeLessThanOrEqual(63);
+      expect(result).toMatch(/[a-z0-9]$/);
+    });
+
+    it('falls back to "project" when name is empty after sanitization', async () => {
+      const { deriveProjectName } = await import('../../src/tools/create-workspace.js');
+      expect(deriveProjectName('https://github.com/org/---.git')).toBe('project');
+    });
+  });
 });

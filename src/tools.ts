@@ -307,10 +307,19 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
         .array(TOOL_ENUM)
         .optional()
         .describe('Tools to pre-install on workspace creation'),
+      repo_url: z
+        .string()
+        .url()
+        .optional()
+        .describe('Git repository URL to clone into the workspace'),
+      branch: z
+        .string()
+        .optional()
+        .describe('Branch or revision to check out (requires repo_url)'),
     },
-    async ({ name, tools }) => {
+    async ({ name, tools, repo_url, branch }) => {
       try {
-        const result = await createWorkspace({ name, tools });
+        const result = await createWorkspace({ name, tools, repo_url, branch });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       } catch (error) {
         return toolError(error);
