@@ -1,26 +1,28 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { ServerMode } from './types.js';
-import { listWorkspaces } from './tools/list-workspaces.js';
-import { startTerminalSession } from './tools/start-terminal-session.js';
-import { readTerminalOutput } from './tools/read-terminal-output.js';
-import { sendTerminalInput } from './tools/send-terminal-input.js';
-import { getTerminalState } from './tools/get-terminal-state.js';
-import { stopTerminalSession } from './tools/stop-terminal-session.js';
-import { execInWorkspace } from './tools/exec-in-workspace.js';
 import { createWorkspace } from './tools/create-workspace.js';
-import { startWorkspace } from './tools/start-workspace.js';
-import { stopWorkspace } from './tools/stop-workspace.js';
 import { deleteWorkspace } from './tools/delete-workspace.js';
-import { getWorkspaceStatus } from './tools/get-workspace-status.js';
-import { getWorkspacePod } from './tools/get-workspace-pod.js';
-import { launchCodingAgentTool } from './tools/launch-coding-agent.js';
-import { getAgentStatusTool } from './tools/get-agent-status.js';
-import { listAllAgentsTool } from './tools/list-all-agents.js';
-import { sendMessageToAgentTool } from './tools/send-message-to-agent.js';
+import { execInWorkspace } from './tools/exec-in-workspace.js';
 import { getAgentOutputTool } from './tools/get-agent-output.js';
-import { stopAgentTool } from './tools/stop-agent.js';
+import { getAgentStatusTool } from './tools/get-agent-status.js';
+import { getTerminalState } from './tools/get-terminal-state.js';
+import { getWorkspacePod } from './tools/get-workspace-pod.js';
+import { getWorkspaceStatus } from './tools/get-workspace-status.js';
 import { injectTool } from './tools/inject-tool.js';
+import { launchCodingAgentTool } from './tools/launch-coding-agent.js';
+import { listAllAgentsTool } from './tools/list-all-agents.js';
+import { listWorkspaces } from './tools/list-workspaces.js';
+import { readTerminalOutput } from './tools/read-terminal-output.js';
+import { receiveMessagesTool } from './tools/receive-messages.js';
+import { sendMessageTool } from './tools/send-message.js';
+import { sendMessageToAgentTool } from './tools/send-message-to-agent.js';
+import { sendTerminalInput } from './tools/send-terminal-input.js';
+import { startTerminalSession } from './tools/start-terminal-session.js';
+import { startWorkspace } from './tools/start-workspace.js';
+import { stopAgentTool } from './tools/stop-agent.js';
+import { stopTerminalSession } from './tools/stop-terminal-session.js';
+import { stopWorkspace } from './tools/stop-workspace.js';
+import type { ServerMode } from './types.js';
 
 const TOOL_ENUM = z.enum([
   'claude-code',
@@ -593,6 +595,49 @@ export function createMcpServer(mode: ServerMode = 'orchestration'): McpServer {
           error,
           'Check available tools in create_workspace(tools=[...]) documentation.',
         );
+      }
+    },
+  );
+
+  server.tool(
+    'send_message',
+    "Send a message to another agent's inbox. Messages are stored until the recipient reads them.",
+    {
+      from: z.string().describe('Sender session_id'),
+      to: z.string().describe('Recipient session_id'),
+      body: z.string().describe('Message content'),
+      thread_id: z
+        .string()
+        .optional()
+        .describe('Thread ID for grouping related messages'),
+    },
+    async ({ from, to, body, thread_id }) => {
+      try {
+        const result = sendMessageTool({ from, to, body, thread_id });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  server.tool(
+    'receive_messages',
+    "Read and consume messages from an agent's inbox. Messages are removed after reading.",
+    {
+      session_id: z.string().describe('Whose inbox to read'),
+      thread_id: z
+        .string()
+        .optional()
+        .describe('Filter by thread — only matching messages are consumed'),
+    },
+    { destructiveHint: true },
+    async ({ session_id, thread_id }) => {
+      try {
+        const result = receiveMessagesTool({ session_id, thread_id });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      } catch (error) {
+        return toolError(error);
       }
     },
   );

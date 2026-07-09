@@ -4,6 +4,7 @@ resources:
   - rbac.yaml
   - deployment.yaml
   - service.yaml
+  - pvc.yaml
 
 images:
   - name: quay.io/che-incubator/che-mcp-server

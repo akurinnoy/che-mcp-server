@@ -25,6 +25,14 @@ spec:
           env:
             - name: CHE_MCP_TRANSPORT
               value: "http"
+            - name: CHE_MCP_DATA_DIR
+              value: "/data"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
           livenessProbe:
             httpGet:
               path: /healthz
@@ -37,3 +45,7 @@ spec:
               port: 8080
             initialDelaySeconds: 3
             periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: che-mcp-server-data
